@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<head th:replace="~{fragments/layout :: head('Hat ' + ${detail.lineId} + ' - Analysis Dashboard')}"></head>
+<body class="bg-light">
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid px-4 py-3">
+    <!-- Sayfa Başlığı ve Panoya Dönüş Butonu -->
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <div>
+            <h1 class="h3 fw-bold mb-1" th:text="'Hat ' + ${detail.lineId}">Hat 1</h1>
+            <p th:if="${detail.totalCount > 0}" class="text-muted mb-0"
+               th:text="${detail.totalCount} + ' kayıttan ' + ${detail.firstRowNo} + '-' + ${detail.lastRowNo} + ' arası'">
+                1319 kayıttan 1-50 arası
+            </p>
+            <p th:if="${detail.totalCount == 0}" class="text-muted mb-0">
+                0 kayıt bulundu
+            </p>
+        </div>
+        <div>
+            <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+                🏭 Panoya Dön
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtreleme Çubuğu -->
+    <div class="card shadow-sm border bg-white mb-4">
+        <div class="card-body p-3">
+            <form method="get" th:action="@{/line/{id}(id=${detail.lineId})}" class="row g-2 align-items-center">
+                <input type="hidden" name="sort" th:value="${detail.filter.sort}" />
+                <div class="col-12 col-sm-6 col-md-4">
+                    <input type="text" name="barcodeQuery" class="form-control" placeholder="Barkod ara…"
+                           th:value="${detail.filter.barcodeQuery}" />
+                </div>
+                <div class="col-12 col-sm-4 col-md-3">
+                    <select name="status" class="form-select">
+                        <option value="" th:selected="${detail.filter.status == null}">Durum: Hepsi</option>
+                        <option value="NEW" th:selected="${detail.filter.status != null and detail.filter.status.name() == 'NEW'}">NEW</option>
+                        <option value="SENT" th:selected="${detail.filter.status != null and detail.filter.status.name() == 'SENT'}">SENT</option>
+                        <option value="ERROR" th:selected="${detail.filter.status != null and detail.filter.status.name() == 'ERROR'}">ERROR</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Ara</button>
+                    <a th:href="@{/line/{id}(id=${detail.lineId})}" class="btn btn-outline-secondary">Temizle</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Boş Durum: Kayıt Yoksa -->
+    <div th:if="${detail.totalCount == 0}" class="alert alert-info shadow-sm" role="status">
+        Filtreye uygun kayıt bulunamadı.
+    </div>
+
+    <!-- Barkod Tablosu ve Sayfalama -->
+    <div th:if="${detail.totalCount > 0}" class="card shadow-sm border bg-white mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col" class="py-3">BARKOD</th>
+                    <th scope="col" class="py-3">
+                        <a th:href="@{/line/{id}(id=${detail.lineId}, barcodeQuery=${detail.filter.barcodeQuery}, status=${detail.filter.status != null ? detail.filter.status.name() : ''}, sort=${detail.filter.sort == 'desc' ? 'asc' : 'desc'})}"
+                           class="text-decoration-none text-dark d-inline-flex align-items-center gap-1">
+                            <span>ZAMAN</span>
+                            <span th:text="${detail.filter.sort == 'asc' ? '▲' : '▼'}">▼</span>
+                        </a>
+                    </th>
+                    <th scope="col" class="py-3">DURUM</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${detail.rows}">
+                    <td class="font-monospace fw-semibold" th:text="${item.barcode}">GU128252503392</td>
+                    <td th:text="${item.creDate}">2025-07-08 11:27:51</td>
+                    <td>
+                        <span class="badge bg-secondary py-1 px-2" th:text="${item.status}">ERROR</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Sayfalayıcı Alt Çubuğu -->
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+            <div>
+                <a th:if="${detail.page > 0}"
+                   th:href="@{/line/{id}(id=${detail.lineId}, barcodeQuery=${detail.filter.barcodeQuery}, status=${detail.filter.status != null ? detail.filter.status.name() : ''}, sort=${detail.filter.sort}, page=${detail.page - 1})}"
+                   class="btn btn-outline-primary btn-sm">
+                    ‹ Önceki
+                </a>
+                <button th:unless="${detail.page > 0}"
+                        class="btn btn-outline-secondary btn-sm" disabled="disabled">
+                    ‹ Önceki
+                </button>
+            </div>
+            <div class="text-muted small">
+                <span th:text="'Sayfa ' + (${detail.totalPages == 0 ? 0 : detail.page + 1}) + ' / ' + ${detail.totalPages}">Sayfa 1 / 27</span>
+            </div>
+            <div>
+                <a th:if="${detail.page < detail.totalPages - 1}"
+                   th:href="@{/line/{id}(id=${detail.lineId}, barcodeQuery=${detail.filter.barcodeQuery}, status=${detail.filter.status != null ? detail.filter.status.name() : ''}, sort=${detail.filter.sort}, page=${detail.page + 1})}"
+                   class="btn btn-outline-primary btn-sm">
+                    Sonraki ›
+                </a>
+                <button th:unless="${detail.page < detail.totalPages - 1}"
+                        class="btn btn-outline-secondary btn-sm" disabled="disabled">
+                    Sonraki ›
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>
