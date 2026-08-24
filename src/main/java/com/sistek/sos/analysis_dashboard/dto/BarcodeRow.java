@@ -2,4 +2,12 @@ package com.sistek.sos.analysis_dashboard.dto;
 
 import java.time.LocalDateTime;
 
-public record BarcodeRow(String barcode, LocalDateTime creDate, String status) {}
+/**
+ * Tek bir barkod satırı modeli.
+ */
+public record BarcodeRow(
+        String barcode,
+        String lineId,
+        LocalDateTime creDate,
+        String status
+) {}

@@ -3,7 +3,7 @@ package com.sistek.sos.analysis_dashboard.dto;
 import java.util.List;
 
 /**
- * Hat ayrıntı ekranı görünüm modeli (T-007).
+ * Hat ayrıntı ekranı görünüm modeli.
  */
 public record LineDetailView(
         String lineId,

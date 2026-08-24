@@ -1,7 +1,11 @@
 package com.sistek.sos.analysis_dashboard.dto;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 /**
- * Barkod filtreleme, arama, sıralama ve sayfalama parametreleri görünüm modeli.
+ * Barkod arama, filtreleme, sıralama ve sayfalama parametreleri.
  */
 public record BarcodeFilter(
         String barcodeQuery,
@@ -10,18 +14,11 @@ public record BarcodeFilter(
         int page,
         int size
 ) {
-    private static final int DEFAULT_SIZE = 50;
-    private static final int MAX_SIZE = 200;
+    public static final int DEFAULT_SIZE = 50;
+    public static final int MAX_SIZE = 200;
 
     /**
-     * Ham istek parametrelerini normalleştirerek güvenli BarcodeFilter nesnesi üretir.
-     *
-     * @param barcodeQuery Barkod arama sorgusu
-     * @param status       Durum filtresi metni (NEW, SENT, ERROR)
-     * @param sort         Sıralama yönü (asc, desc)
-     * @param page         0 tabanlı sayfa numarası
-     * @param size         Sayfa boyutu (1-200 arası)
-     * @return Normalleştirilmiş BarcodeFilter
+     * Ham istek parametrelerini normalleştirerek güvenli BarcodeFilter üretir.
      */
     public static BarcodeFilter of(String barcodeQuery, String status, String sort, Integer page, Integer size) {
         int normalizedPage = (page == null || page < 0) ? 0 : page;
@@ -53,9 +50,11 @@ public record BarcodeFilter(
     }
 
     /**
-     * Varsayılan sayfa boyutu (50) ile BarcodeFilter üretir.
+     * Filtre parametrelerine göre güvenli Pageable nesnesi üretir.
+     * İkincil anahtar olarak barcode kullanılır; bu sayede eşit zaman damgalarında sayfalar arası kayıt kayması önlenir.
      */
-    public static BarcodeFilter of(String barcodeQuery, String status, String sort, Integer page) {
-        return of(barcodeQuery, status, sort, page, DEFAULT_SIZE);
+    public Pageable toPageable() {
+        Sort.Direction direction = "asc".equalsIgnoreCase(sort) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        return PageRequest.of(page, size, Sort.by(direction, "cre_date").and(Sort.by("barcode")));
     }
 }

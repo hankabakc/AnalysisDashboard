@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * PLC REST API Denetleyicisi (T-008).
+ * PLC REST API denetleyicisi.
  */
 @RestController
 @RequestMapping("/api/plc")

@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * Hat Ayrıntısı Web Denetleyicisi (T-007).
+ * Hat ayrıntısı web denetleyicisi.
  */
 @Controller
 public class LineController {

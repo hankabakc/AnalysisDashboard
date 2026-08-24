@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * PLC REST API servis katmanı (T-008).
+ * PLC REST API servis katmanı.
  * Not: Tek PLC varsayımı API'ye taşınmaz; tüm satırlar döner. plcIp hiçbir yanıtta yer almaz.
  */
 @Service

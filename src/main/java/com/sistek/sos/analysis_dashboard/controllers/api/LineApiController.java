@@ -1,7 +1,7 @@
 package com.sistek.sos.analysis_dashboard.controllers.api;
 
-import com.sistek.sos.analysis_dashboard.dto.api.BarcodeResponse;
-import com.sistek.sos.analysis_dashboard.dto.api.LineResponse;
+import com.sistek.sos.analysis_dashboard.dto.BarcodeRow;
+import com.sistek.sos.analysis_dashboard.dto.LineSummary;
 import com.sistek.sos.analysis_dashboard.dto.api.PageResponse;
 import com.sistek.sos.analysis_dashboard.services.api.LineApiService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Hat ve Hat Barkodları REST API Denetleyicisi (T-008).
+ * Hat ve hat barkodları REST API denetleyicisi.
  */
 @RestController
 @RequestMapping("/api/lines")
@@ -26,17 +26,17 @@ public class LineApiController {
     }
 
     @GetMapping
-    public List<LineResponse> getAllLines() {
+    public List<LineSummary> getAllLines() {
         return lineApiService.getAllLines();
     }
 
     @GetMapping("/{id}")
-    public LineResponse getLineById(@PathVariable("id") String id) {
+    public LineSummary getLineById(@PathVariable("id") String id) {
         return lineApiService.getLineById(id);
     }
 
     @GetMapping("/{id}/barcodes")
-    public PageResponse<BarcodeResponse> getLineBarcodes(
+    public PageResponse<BarcodeRow> getLineBarcodes(
             @PathVariable("id") String id,
             @RequestParam(name = "barcodeQuery", required = false) String barcodeQuery,
             @RequestParam(name = "status", required = false) String status,

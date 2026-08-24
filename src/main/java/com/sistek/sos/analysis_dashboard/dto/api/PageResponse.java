@@ -3,11 +3,9 @@ package com.sistek.sos.analysis_dashboard.dto.api;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
-import java.util.function.Function;
 
 /**
- * Sayfalanmış veri listesi standart REST yanıt modeli (T-008).
- * Spring Page nesnesinin doğrudan serileştirilmesini engelleyerek sürümler arası kararlılık sağlar.
+ * Sayfalanmış veri listesi standart REST yanıt modeli.
  */
 public record PageResponse<T>(
         List<T> content,
@@ -18,13 +16,9 @@ public record PageResponse<T>(
         boolean first,
         boolean last
 ) {
-    /**
-     * Spring Data Page nesnesini PageResponse DTO'suna dönüştürür.
-     */
-    public static <S, T> PageResponse<T> from(Page<S> page, Function<S, T> mapper) {
-        List<T> mappedContent = page.getContent().stream().map(mapper).toList();
+    public static <T> PageResponse<T> from(Page<T> page) {
         return new PageResponse<>(
-                mappedContent,
+                page.getContent(),
                 page.getNumber(),
                 page.getSize(),
                 page.getTotalElements(),

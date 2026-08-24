@@ -16,7 +16,7 @@ public class DashboardController {
 
     @GetMapping("/dashboard")
     public String dashboardPage(Model model) {
-        dashboardService.getPlc().ifPresent(plc -> model.addAttribute("plc", plc));
+        model.addAttribute("plc", dashboardService.getPlc());
         model.addAttribute("lines", dashboardService.getLines());
         return "dashboard";
     }

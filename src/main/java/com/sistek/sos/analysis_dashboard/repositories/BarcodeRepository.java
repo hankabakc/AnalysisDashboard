@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
- * BarcodeData varlığı için veri erişim katmanı (SRP & Repository Pattern).
+ * BarcodeData varlığı için veri erişim katmanı.
  */
 @Repository
 public interface BarcodeRepository extends JpaRepository<BarcodeData, BarcodeId> {
@@ -23,6 +23,9 @@ public interface BarcodeRepository extends JpaRepository<BarcodeData, BarcodeId>
             GROUP BY b.line_id
             """, nativeQuery = true)
     List<LineBarcodeCountProjection> countBarcodesGroupedByLineId();
+
+    @Query(value = "SELECT count(b.barcode) FROM barcode_data b WHERE b.line_id = :lineId", nativeQuery = true)
+    long countByLineId(@Param("lineId") String lineId);
 
     @Query(value = """
             SELECT b.barcode AS barcode, b.line_id AS lineId, b.cre_date AS creDate, b.status AS status

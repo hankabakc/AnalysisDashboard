@@ -153,4 +153,14 @@ class ApiControllerTest {
                 .andExpect(jsonPath("$.totalElements", is(1319)))
                 .andExpect(jsonPath("$.totalPages", is(7)));
     }
+
+    @Test
+    @DisplayName("GET /api/lines/1/barcodes?page=abc: 400 Bad Request ve application/problem+json döner")
+    void getLine1BarcodesInvalidTypeReturnsProblemDetail() throws Exception {
+        mvc.perform(get("/api/lines/1/barcodes").param("page", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.title").exists());
+    }
 }

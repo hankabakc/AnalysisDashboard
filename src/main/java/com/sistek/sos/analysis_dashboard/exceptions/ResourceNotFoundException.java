@@ -1,7 +1,7 @@
 package com.sistek.sos.analysis_dashboard.exceptions;
 
 /**
- * İstenen kaynak bulunamadığında fırlatılan özel istisna (T-008).
+ * İstenen kaynak bulunamadığında fırlatılan özel istisna.
  */
 public class ResourceNotFoundException extends RuntimeException {
 

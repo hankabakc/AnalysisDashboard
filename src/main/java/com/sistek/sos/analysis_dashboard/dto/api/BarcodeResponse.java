@@ -3,7 +3,7 @@ package com.sistek.sos.analysis_dashboard.dto.api;
 import java.time.LocalDateTime;
 
 /**
- * Barkod verisi REST yanıt modeli (T-008).
+ * Barkod verisi REST yanıt modeli.
  */
 public record BarcodeResponse(
         String barcode,

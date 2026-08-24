@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
- * REST API için merkezi RFC 7807 ProblemDetail hata yönetimi (T-008).
+ * REST API için merkezi RFC 7807 ProblemDetail hata yönetimi.
  */
 @RestControllerAdvice(basePackages = "com.sistek.sos.analysis_dashboard.controllers.api")
 public class GlobalApiExceptionHandler {
