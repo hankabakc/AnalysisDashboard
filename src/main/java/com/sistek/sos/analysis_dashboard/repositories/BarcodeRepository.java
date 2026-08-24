@@ -25,15 +25,15 @@ public interface BarcodeRepository extends JpaRepository<BarcodeData, BarcodeId>
     List<LineBarcodeCountProjection> countBarcodesGroupedByLineId();
 
     @Query(value = """
-            SELECT b.barcode AS barcode, b.cre_date AS creDate, b.status AS status
+            SELECT b.barcode AS barcode, b.line_id AS lineId, b.cre_date AS creDate, b.status AS status
             FROM barcode_data b
-            WHERE b.line_id = :lineId
+            WHERE (CAST(:lineId AS text) IS NULL OR b.line_id = CAST(:lineId AS text))
               AND (CAST(:barcodeQuery AS text) IS NULL OR b.barcode ILIKE '%' || CAST(:barcodeQuery AS text) || '%')
               AND (CAST(:status AS text) IS NULL OR b.status = CAST(:status AS text))
             """,
            countQuery = """
             SELECT count(*) FROM barcode_data b
-            WHERE b.line_id = :lineId
+            WHERE (CAST(:lineId AS text) IS NULL OR b.line_id = CAST(:lineId AS text))
               AND (CAST(:barcodeQuery AS text) IS NULL OR b.barcode ILIKE '%' || CAST(:barcodeQuery AS text) || '%')
               AND (CAST(:status AS text) IS NULL OR b.status = CAST(:status AS text))
             """,
