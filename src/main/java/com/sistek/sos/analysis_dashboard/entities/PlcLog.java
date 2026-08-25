@@ -6,12 +6,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Getter
-@Setter
 @NoArgsConstructor
 @Entity
 @Table(name = "plc_log")
@@ -20,9 +18,9 @@ public class PlcLog {
     @EmbeddedId
     private PlcLogId id;
 
-    @Column(nullable = false)
+    @Column(name = "proc_date", nullable = false)
     private LocalDateTime procDate;
 
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     private String status;
 }

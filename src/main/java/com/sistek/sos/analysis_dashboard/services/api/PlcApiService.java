@@ -6,9 +6,8 @@ import com.sistek.sos.analysis_dashboard.dto.api.PageResponse;
 import com.sistek.sos.analysis_dashboard.dto.api.PlcResponse;
 import com.sistek.sos.analysis_dashboard.exceptions.ResourceNotFoundException;
 import com.sistek.sos.analysis_dashboard.repositories.PlcInfoRepository;
-import com.sistek.sos.analysis_dashboard.repositories.PlcLogRepository;
+import com.sistek.sos.analysis_dashboard.services.LogQueryService;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +22,11 @@ import java.util.List;
 public class PlcApiService {
 
     private final PlcInfoRepository plcInfoRepository;
-    private final PlcLogRepository plcLogRepository;
+    private final LogQueryService logQueryService;
 
-    public PlcApiService(PlcInfoRepository plcInfoRepository, PlcLogRepository plcLogRepository) {
+    public PlcApiService(PlcInfoRepository plcInfoRepository, LogQueryService logQueryService) {
         this.plcInfoRepository = plcInfoRepository;
-        this.plcLogRepository = plcLogRepository;
+        this.logQueryService = logQueryService;
     }
 
     public List<PlcResponse> getAllPlcs() {
@@ -48,10 +47,7 @@ public class PlcApiService {
         }
 
         PageQuery query = PageQuery.of(page, size, sort);
-        Pageable pageable = query.toPageable("procDate", "id.seqNo");
-        Page<LogEntry> logPage = plcLogRepository.findByIdPlcId(id, pageable)
-                .map(log -> new LogEntry(log.getId().getPlcId(), log.getId().getSeqNo(), log.getProcDate(), log.getStatus()));
-
+        Page<LogEntry> logPage = logQueryService.findPlcLogs(id, query);
         return PageResponse.from(logPage);
     }
 }

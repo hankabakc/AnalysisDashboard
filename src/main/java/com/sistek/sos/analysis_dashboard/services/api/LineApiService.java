@@ -6,13 +6,11 @@ import com.sistek.sos.analysis_dashboard.dto.LineSummary;
 import com.sistek.sos.analysis_dashboard.dto.LogEntry;
 import com.sistek.sos.analysis_dashboard.dto.PageQuery;
 import com.sistek.sos.analysis_dashboard.dto.api.PageResponse;
-import com.sistek.sos.analysis_dashboard.entities.LineLog;
 import com.sistek.sos.analysis_dashboard.exceptions.ResourceNotFoundException;
-import com.sistek.sos.analysis_dashboard.repositories.LineLogRepository;
 import com.sistek.sos.analysis_dashboard.services.BarcodeQueryService;
 import com.sistek.sos.analysis_dashboard.services.LineQueryService;
+import com.sistek.sos.analysis_dashboard.services.LogQueryService;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,15 +25,15 @@ public class LineApiService {
 
     private final LineQueryService lineQueryService;
     private final BarcodeQueryService barcodeQueryService;
-    private final LineLogRepository lineLogRepository;
+    private final LogQueryService logQueryService;
 
     public LineApiService(
             LineQueryService lineQueryService,
             BarcodeQueryService barcodeQueryService,
-            LineLogRepository lineLogRepository) {
+            LogQueryService logQueryService) {
         this.lineQueryService = lineQueryService;
         this.barcodeQueryService = barcodeQueryService;
-        this.lineLogRepository = lineLogRepository;
+        this.logQueryService = logQueryService;
     }
 
     public List<LineSummary> getAllLines() {
@@ -68,10 +66,7 @@ public class LineApiService {
         }
 
         PageQuery query = PageQuery.of(page, size, sort);
-        Pageable pageable = query.toPageable("procDate", "id.seqNo");
-        Page<LogEntry> logPage = lineLogRepository.findByIdLineId(id, pageable)
-                .map(log -> new LogEntry(log.getId().getLineId(), log.getId().getSeqNo(), log.getProcDate(), log.getStatus()));
-
+        Page<LogEntry> logPage = logQueryService.findLineLogs(id, query);
         return PageResponse.from(logPage);
     }
 }
