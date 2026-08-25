@@ -252,4 +252,30 @@ class ApiControllerTest {
                 .andExpect(jsonPath("$.totalElements", is(72)))
                 .andExpect(jsonPath("$.totalPages", is(1)));
     }
+
+    @Test
+    @DisplayName("GET /v3/api-docs: 200 döner, 8 API yolunu içerir, ekranları ve plcIp sızdırmaz")
+    void getApiDocs() throws Exception {
+        mvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/plc']").exists())
+                .andExpect(jsonPath("$.paths['/api/plc/{id}']").exists())
+                .andExpect(jsonPath("$.paths['/api/plc/{id}/logs']").exists())
+                .andExpect(jsonPath("$.paths['/api/lines']").exists())
+                .andExpect(jsonPath("$.paths['/api/lines/{id}']").exists())
+                .andExpect(jsonPath("$.paths['/api/lines/{id}/barcodes']").exists())
+                .andExpect(jsonPath("$.paths['/api/lines/{id}/logs']").exists())
+                .andExpect(jsonPath("$.paths['/api/barcodes']").exists())
+                .andExpect(content().string(not(containsString("/dashboard"))))
+                .andExpect(content().string(not(containsString("/line/{lineId}"))))
+                .andExpect(content().string(not(containsString("plcIp"))))
+                .andExpect(content().string(not(containsString("plc_ip"))));
+    }
+
+    @Test
+    @DisplayName("GET /swagger-ui.html: 3xx yönlendirme döner")
+    void getSwaggerUi() throws Exception {
+        mvc.perform(get("/swagger-ui.html"))
+                .andExpect(status().is3xxRedirection());
+    }
 }

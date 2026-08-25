@@ -26,6 +26,40 @@ Veriyi yazan sistem PLC toplayıcıdır; bu uygulama **yalnızca okur**, hiçbir
 
 ---
 
+## API
+
+Uygulama, veritabanındaki 5 tabloyu dışarıya sunan 8 adet salt okunur JSON REST API ucuna sahiptir.
+
+### Swagger UI (Etkileşimli Dokümantasyon)
+- **Arayüz:** <http://localhost:8080/swagger-ui.html> (veya <http://localhost:8080/swagger-ui/index.html>)
+- **OpenAPI JSON:** <http://localhost:8080/v3/api-docs>
+
+### Uç Noktaları
+
+| Uç | Yöntem | Açıklama | Yanıt |
+| :--- | :--- | :--- | :--- |
+| `/api/plc` | GET | Tanımlı tüm PLC listesi | `List<PlcResponse>` |
+| `/api/plc/{id}` | GET | Tek bir PLC bilgisi | `PlcResponse` (404 ProblemDetail) |
+| `/api/plc/{id}/logs` | GET | PLC durum değişiklik geçmişi | `PageResponse<LogEntry>` (200 / 404) |
+| `/api/lines` | GET | Tüm hatlar ve toplam barkod adetleri | `List<LineSummary>` |
+| `/api/lines/{id}` | GET | Tek bir hat bilgisi ve ürün adedi | `LineSummary` (404 ProblemDetail) |
+| `/api/lines/{id}/barcodes` | GET | Hatta ait barkod listesi | `PageResponse<BarcodeRow>` (404 ProblemDetail) |
+| `/api/lines/{id}/logs` | GET | Hat durum değişiklik geçmişi | `PageResponse<LogEntry>` (200 / 404) |
+| `/api/barcodes` | GET | Genel barkod arama ve sayfalama | `PageResponse<BarcodeRow>` |
+
+### Sorgu Parametreleri
+
+| Parametre | Tip | Varsayılan | Açıklama |
+| :--- | :--- | :--- | :--- |
+| `page` | Integer | `0` | 0 tabanlı sayfa numarası (negatif değerler 0 kabul edilir) |
+| `size` | Integer | `50` | Sayfa boyutu (1 ile 200 arası sınırlandırılır) |
+| `sort` | String | `desc` | Sıralama yönü (`asc` veya `desc`) |
+| `barcodeQuery` | String | — | Barkod metni arama filtresi (büyük/küçük harf duyarsız) |
+| `status` | String | — | Durum filtresi (Barkod için `NEW`, `SENT`, `ERROR`) |
+| `lineId` | String | — | `/api/barcodes` için hat filtresi |
+
+---
+
 ## Çalıştırma
 
 ### 1. Veritabanı
