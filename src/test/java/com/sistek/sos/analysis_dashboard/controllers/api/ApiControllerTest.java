@@ -8,7 +8,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -162,5 +164,92 @@ class ApiControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status", is(400)))
                 .andExpect(jsonPath("$.title").exists());
+    }
+
+    @Test
+    @DisplayName("GET /api/plc/192.168.1.181/logs: totalElements=1145, content=50, totalPages=23")
+    void getPlcLogs() throws Exception {
+        mvc.perform(get("/api/plc/192.168.1.181/logs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(1145)))
+                .andExpect(jsonPath("$.totalPages", is(23)))
+                .andExpect(jsonPath("$.content", hasSize(50)))
+                .andExpect(content().string(not(containsString("plcIp"))))
+                .andExpect(content().string(not(containsString("plc_ip"))));
+    }
+
+    @Test
+    @DisplayName("GET /api/plc/yok/logs: 404 döner")
+    void getPlcLogsNotFound() throws Exception {
+        mvc.perform(get("/api/plc/yok/logs"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.title", is("Kaynak Bulunamadı")));
+    }
+
+    @Test
+    @DisplayName("GET /api/lines/1/logs: totalElements=72, totalPages=2; GET /api/lines/4/logs: totalElements=2")
+    void getLineLogs() throws Exception {
+        mvc.perform(get("/api/lines/1/logs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(72)))
+                .andExpect(jsonPath("$.totalPages", is(2)))
+                .andExpect(jsonPath("$.content", hasSize(50)));
+
+        mvc.perform(get("/api/lines/4/logs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(2)))
+                .andExpect(jsonPath("$.totalPages", is(1)))
+                .andExpect(jsonPath("$.content", hasSize(2)));
+    }
+
+    @Test
+    @DisplayName("GET /api/lines/2/logs: 200 döner, totalElements=0, content=[] (404 değil)")
+    void getLineLogsEmptyForExistingLine() throws Exception {
+        mvc.perform(get("/api/lines/2/logs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(0)))
+                .andExpect(jsonPath("$.totalPages", is(0)))
+                .andExpect(jsonPath("$.content", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("GET /api/lines/99/logs: 404 döner")
+    void getLineLogsNotFound() throws Exception {
+        mvc.perform(get("/api/lines/99/logs"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status", is(404)))
+                .andExpect(jsonPath("$.title", is("Kaynak Bulunamadı")));
+    }
+
+    @Test
+    @DisplayName("GET /api/lines/1/logs?sort=asc vs ?sort=desc farklı ilk procDate döner")
+    void getLineLogsSorting() throws Exception {
+        String descResponse = mvc.perform(get("/api/lines/1/logs").param("sort", "desc"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String ascResponse = mvc.perform(get("/api/lines/1/logs").param("sort", "asc"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(descResponse, not(equalTo(ascResponse)));
+    }
+
+    @Test
+    @DisplayName("GET /api/lines/1/logs?page=-1&size=9999&sort=xyz: 200 döner, page=0, size=200, desc uygulanır")
+    void getLineLogsInvalidParamsTolerated() throws Exception {
+        mvc.perform(get("/api/lines/1/logs")
+                        .param("page", "-1")
+                        .param("size", "9999")
+                        .param("sort", "xyz"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page", is(0)))
+                .andExpect(jsonPath("$.size", is(200)))
+                .andExpect(jsonPath("$.content", hasSize(72)))
+                .andExpect(jsonPath("$.totalElements", is(72)))
+                .andExpect(jsonPath("$.totalPages", is(1)));
     }
 }

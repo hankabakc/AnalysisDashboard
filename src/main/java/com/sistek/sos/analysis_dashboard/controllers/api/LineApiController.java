@@ -2,6 +2,7 @@ package com.sistek.sos.analysis_dashboard.controllers.api;
 
 import com.sistek.sos.analysis_dashboard.dto.BarcodeRow;
 import com.sistek.sos.analysis_dashboard.dto.LineSummary;
+import com.sistek.sos.analysis_dashboard.dto.LogEntry;
 import com.sistek.sos.analysis_dashboard.dto.api.PageResponse;
 import com.sistek.sos.analysis_dashboard.services.api.LineApiService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,5 +45,14 @@ public class LineApiController {
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "size", required = false) Integer size) {
         return lineApiService.getLineBarcodes(id, barcodeQuery, status, sort, page, size);
+    }
+
+    @GetMapping("/{id}/logs")
+    public PageResponse<LogEntry> getLineLogs(
+            @PathVariable("id") String id,
+            @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "size", required = false) Integer size,
+            @RequestParam(name = "sort", required = false) String sort) {
+        return lineApiService.getLineLogs(id, page, size, sort);
     }
 }

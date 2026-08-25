@@ -21,7 +21,7 @@ public class LineDetailService {
     }
 
     public LineDetailView getLineDetail(String lineId, String barcodeQuery, String status, String sort, Integer page) {
-        BarcodeFilter filter = BarcodeFilter.of(barcodeQuery, status, sort, page, BarcodeFilter.DEFAULT_SIZE);
+        BarcodeFilter filter = BarcodeFilter.of(barcodeQuery, status, sort, page, null);
         Page<BarcodeRow> pageResult = barcodeQueryService.find(lineId, filter);
 
         long totalCount = pageResult.getTotalElements();
