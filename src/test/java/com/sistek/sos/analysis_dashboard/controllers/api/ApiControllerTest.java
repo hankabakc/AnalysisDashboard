@@ -254,6 +254,7 @@ class ApiControllerTest {
     }
 
     @Test
+    @org.springframework.security.test.context.support.WithMockUser(roles = "ADMIN")
     @DisplayName("GET /v3/api-docs: 200 döner, 8 API yolunu içerir, ekranları ve plcIp sızdırmaz")
     void getApiDocs() throws Exception {
         mvc.perform(get("/v3/api-docs"))
@@ -273,6 +274,7 @@ class ApiControllerTest {
     }
 
     @Test
+    @org.springframework.security.test.context.support.WithMockUser(roles = "ADMIN")
     @DisplayName("GET /swagger-ui.html: 3xx yönlendirme döner")
     void getSwaggerUi() throws Exception {
         mvc.perform(get("/swagger-ui.html"))

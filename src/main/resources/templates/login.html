@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Giriş Yap - Analysis Dashboard')}"></head>
+<body class="bg-light">
+
+<div class="container d-flex justify-content-center align-items-center min-vh-100">
+    <div class="card shadow-sm border-0" style="max-width: 420px; width: 100%;">
+        <div class="card-header bg-dark text-white text-center py-3">
+            <h4 class="mb-0 fw-bold">🏭 Analysis Dashboard</h4>
+            <small class="text-white-50">Sistem Girişi</small>
+        </div>
+        <div class="card-body p-4">
+            <div th:if="${param.error}" class="alert alert-danger py-2" role="alert">
+                Kullanıcı adı veya parola hatalı.
+            </div>
+            <div th:if="${param.logout}" class="alert alert-success py-2" role="alert">
+                Başarıyla çıkış yapıldı.
+            </div>
+
+            <form th:action="@{/login}" method="post">
+                <div class="mb-3">
+                    <label for="username" class="form-label fw-semibold">Kullanıcı Adı</label>
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Kullanıcı adınızı giriniz" required autofocus />
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="form-label fw-semibold">Parola</label>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Parolanızı giriniz" required />
+                </div>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary fw-semibold py-2">Giriş Yap</button>
+                </div>
+            </form>
+        </div>
+        <div class="card-footer bg-white text-center text-muted py-2 border-0">
+            <small>Salt Okunur Üretim Analiz Panosu</small>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

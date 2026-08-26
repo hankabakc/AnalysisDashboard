@@ -60,6 +60,30 @@ Uygulama, veritabanındaki 5 tabloyu dışarıya sunan 8 adet salt okunur JSON R
 
 ---
 
+## Güvenlik
+
+Uygulama, Spring Security ile korunmakta olup rol bazlı erişim denetimi (RBAC) uygular. Kullanıcılar ve rolleri veritabanında (`app_user` ve `app_user_role`) saklanır; parolalar BCrypt ile karma hale getirilir.
+
+### Roller ve Yetki Matrisi
+
+| Rol | Web Arayüzü (`/dashboard`, `/line/**`) | REST API (`/api/**`) | Swagger & Dokümantasyon (`/swagger-ui/**`, `/v3/api-docs/**`) |
+| :--- | :--- | :--- | :--- |
+| `ADMIN` | ✅ Açık | ✅ Açık | ✅ Açık |
+| `USER` | ✅ Açık | ❌ Kapalı | ❌ Kapalı |
+| `APIUSER` | ❌ Kapalı | ✅ Açık | ❌ Kapalı |
+
+### Geliştirme Ortamı Varsayılan Kullanıcıları
+
+> ⚠️ **Önemli:** Aşağıdaki kullanıcılar yalnızca geliştirme ve test ortamı içindir. Canlı/üretim ortamında parolalar mutlaka değiştirilmelidir.
+
+| Kullanıcı Adı | Parola | Rol |
+| :--- | :--- | :--- |
+| `admin` | `admin123` | `ADMIN` |
+| `user` | `user123` | `USER` |
+| `apiuser` | `apiuser123` | `APIUSER` |
+
+---
+
 ## Çalıştırma
 
 ### 1. Veritabanı

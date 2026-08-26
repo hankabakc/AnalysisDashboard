@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <!--
   Ortak iskelet. Tum sayfalar head'i buradan alir; kopyalanmaz (WEB-07 §2.3).
   Varliklar pakete gomulu WebJar'lardan gelir, dis CDN yoktur (WEB-06 §2.1).
@@ -18,9 +18,17 @@
         <a class="navbar-brand fw-bold" th:href="@{/dashboard}">
             🏭 Analysis Dashboard
         </a>
-        <div class="navbar-nav">
+        <div class="navbar-nav me-auto">
             <a class="nav-link" th:href="@{/}">Ana Sayfa</a>
             <a class="nav-link active" th:href="@{/dashboard}">Üretim Panosu</a>
+        </div>
+        <div class="d-flex align-items-center" sec:authorize="isAuthenticated()">
+            <span class="text-light me-3">
+                👤 <span sec:authentication="name" class="fw-semibold"></span>
+            </span>
+            <form th:action="@{/logout}" method="post" class="d-inline m-0">
+                <button type="submit" class="btn btn-outline-light btn-sm">Çıkış Yap</button>
+            </form>
         </div>
     </div>
 </nav>
