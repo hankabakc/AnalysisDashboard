@@ -89,11 +89,11 @@ REST API (`/api/**`) uçları stateless ve JWT Bearer token ile korunmaktadır.
 1. **İmzalama Anahtarı (`JWT_SECRET`):**
    Uygulama çalıştırılmadan önce en az 256-bit (32 karakter) uzunluğunda bir `JWT_SECRET` ortam değişkeni tanımlanmalıdır:
    ```bash
-   export JWT_SECRET="supersecretkeyforjwttestingenvironment1234567890"
+   export JWT_SECRET=<en-az-32-karakterlik-rastgele-anahtar>
    ```
    Windows PowerShell:
    ```bash
-   $env:JWT_SECRET = "supersecretkeyforjwttestingenvironment1234567890"
+   $env:JWT_SECRET = "<en-az-32-karakterlik-rastgele-anahtar>"
    ```
 
 2. **Giriş Yaparak Token Alma:**

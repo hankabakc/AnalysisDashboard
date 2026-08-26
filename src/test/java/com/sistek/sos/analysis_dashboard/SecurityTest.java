@@ -135,7 +135,8 @@ class SecurityTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status", is(401)))
-                .andExpect(jsonPath("$.detail", is("Kullanıcı adı veya parola hatalı.")));
+                .andExpect(jsonPath("$.detail", is("Kullanıcı adı veya parola hatalı.")))
+                .andExpect(jsonPath("$.properties").doesNotExist());
     }
 
     @Test
@@ -145,6 +146,7 @@ class SecurityTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status", is(401)))
+                .andExpect(jsonPath("$.properties").doesNotExist())
                 .andExpect(content().string(not(containsString("<form"))))
                 .andExpect(content().string(not(containsString("<html"))));
     }
@@ -170,7 +172,8 @@ class SecurityTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.status", is(403)));
+                .andExpect(jsonPath("$.status", is(403)))
+                .andExpect(jsonPath("$.properties").doesNotExist());
     }
 
     @Test
