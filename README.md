@@ -82,6 +82,44 @@ Uygulama, Spring Security ile korunmakta olup rol bazlı erişim denetimi (RBAC)
 | `user` | `user123` | `USER` |
 | `apiuser` | `apiuser123` | `APIUSER` |
 
+### JWT ile REST API Erişimi
+
+REST API (`/api/**`) uçları stateless ve JWT Bearer token ile korunmaktadır.
+
+1. **İmzalama Anahtarı (`JWT_SECRET`):**
+   Uygulama çalıştırılmadan önce en az 256-bit (32 karakter) uzunluğunda bir `JWT_SECRET` ortam değişkeni tanımlanmalıdır:
+   ```bash
+   export JWT_SECRET="supersecretkeyforjwttestingenvironment1234567890"
+   ```
+   Windows PowerShell:
+   ```bash
+   $env:JWT_SECRET = "supersecretkeyforjwttestingenvironment1234567890"
+   ```
+
+2. **Giriş Yaparak Token Alma:**
+   ```bash
+   curl -X POST http://localhost:8080/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"username":"apiuser","password":"apiuser123"}'
+   ```
+   Örnek Yanıt:
+   ```json
+   {
+     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+     "tokenType": "Bearer",
+     "expiresIn": 3600
+   }
+   ```
+
+3. **Token ile API Çağrısı:**
+   ```bash
+   curl -H "Authorization: Bearer <token>" http://localhost:8080/api/lines
+   ```
+
+4. **Swagger UI ile Kullanım:**
+   - Swagger arayüzü (`/swagger-ui.html`) `ADMIN` oturumuyla açılır.
+   - Sağ üstteki **Authorize** düğmesine tıklanarak `/api/auth/login` ucundan alınan token girilir.
+
 ---
 
 ## Çalıştırma

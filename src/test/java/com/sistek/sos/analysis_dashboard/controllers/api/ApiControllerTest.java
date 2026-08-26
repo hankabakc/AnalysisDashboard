@@ -19,11 +19,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.springframework.security.test.context.support.WithMockUser;
+
 /**
  * REST API Entegrasyon Testleri (T-008).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithMockUser(roles = "APIUSER")
 class ApiControllerTest {
 
     @Autowired
