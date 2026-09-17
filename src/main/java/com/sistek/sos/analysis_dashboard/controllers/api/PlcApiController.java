@@ -1,9 +1,10 @@
 package com.sistek.sos.analysis_dashboard.controllers.api;
 
 import com.sistek.sos.analysis_dashboard.dto.LogEntry;
+import com.sistek.sos.analysis_dashboard.dto.PageQuery;
+import com.sistek.sos.analysis_dashboard.dto.PlcSummary;
 import com.sistek.sos.analysis_dashboard.dto.api.PageResponse;
-import com.sistek.sos.analysis_dashboard.dto.api.PlcResponse;
-import com.sistek.sos.analysis_dashboard.services.api.PlcApiService;
+import com.sistek.sos.analysis_dashboard.services.PlcService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -18,28 +19,29 @@ import java.util.List;
 
 /**
  * PLC REST API denetleyicisi.
+ * Not: Panodaki tek PLC varsayımı API'ye taşınmaz; tüm satırlar döner.
  */
 @Tag(name = "PLC", description = "PLC bilgileri ve log uçları")
 @RestController
 @RequestMapping("/api/plc")
 public class PlcApiController {
 
-    private final PlcApiService plcApiService;
+    private final PlcService plcService;
 
-    public PlcApiController(PlcApiService plcApiService) {
-        this.plcApiService = plcApiService;
+    public PlcApiController(PlcService plcService) {
+        this.plcService = plcService;
     }
 
     @Operation(summary = "Tüm PLC listesini getirir")
     @GetMapping
-    public List<PlcResponse> getAllPlcs() {
-        return plcApiService.getAllPlcs();
+    public List<PlcSummary> getAllPlcs() {
+        return plcService.findAll();
     }
 
     @Operation(summary = "ID ile tek bir PLC getirir")
     @GetMapping("/{id}")
-    public PlcResponse getPlcById(@Parameter(description = "PLC ID") @PathVariable("id") String id) {
-        return plcApiService.getPlcById(id);
+    public PlcSummary getPlcById(@Parameter(description = "PLC ID") @PathVariable("id") String id) {
+        return plcService.findById(id);
     }
 
     @Operation(summary = "PLC durum loglarını sayfalı olarak getirir")
@@ -51,6 +53,6 @@ public class PlcApiController {
             @Parameter(description = "Sayfa numarası (0 tabanlı)") @RequestParam(name = "page", required = false) Integer page,
             @Parameter(description = "Sayfa boyutu (varsayılan 50, en fazla 200)") @RequestParam(name = "size", required = false) Integer size,
             @Parameter(description = "Sıralama yönü (asc/desc)") @RequestParam(name = "sort", required = false) String sort) {
-        return plcApiService.getPlcLogs(id, page, size, sort);
+        return PageResponse.from(plcService.findLogs(id, PageQuery.of(page, size, sort)));
     }
 }

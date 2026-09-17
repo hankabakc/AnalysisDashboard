@@ -4,7 +4,6 @@ import com.sistek.sos.analysis_dashboard.exceptions.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -21,7 +20,8 @@ public class GlobalApiExceptionHandler {
         return problemDetail;
     }
 
-    @ExceptionHandler({BadCredentialsException.class, UsernameNotFoundException.class})
+    // Olmayan kullanıcı da buraya düşer: Spring, UsernameNotFoundException'ı BadCredentialsException'a çevirir
+    @ExceptionHandler(BadCredentialsException.class)
     public ProblemDetail handleBadCredentials() {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.UNAUTHORIZED,

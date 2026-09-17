@@ -3,11 +3,10 @@ package com.sistek.sos.analysis_dashboard.controllers.api;
 import com.sistek.sos.analysis_dashboard.dto.BarcodeFilter;
 import com.sistek.sos.analysis_dashboard.dto.BarcodeRow;
 import com.sistek.sos.analysis_dashboard.dto.api.PageResponse;
-import com.sistek.sos.analysis_dashboard.services.BarcodeQueryService;
+import com.sistek.sos.analysis_dashboard.services.LineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,10 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/barcodes")
 public class BarcodeApiController {
 
-    private final BarcodeQueryService barcodeQueryService;
+    private final LineService lineService;
 
-    public BarcodeApiController(BarcodeQueryService barcodeQueryService) {
-        this.barcodeQueryService = barcodeQueryService;
+    public BarcodeApiController(LineService lineService) {
+        this.lineService = lineService;
     }
 
     @Operation(summary = "Barkodları filtreli ve sayfalı olarak listeler")
@@ -37,7 +36,6 @@ public class BarcodeApiController {
             @Parameter(description = "Sayfa numarası (0 tabanlı)") @RequestParam(name = "page", required = false) Integer page,
             @Parameter(description = "Sayfa boyutu (varsayılan 50, en fazla 200)") @RequestParam(name = "size", required = false) Integer size) {
         BarcodeFilter filter = BarcodeFilter.of(barcodeQuery, status, sort, page, size);
-        Page<BarcodeRow> pageResult = barcodeQueryService.find(lineId, filter);
-        return PageResponse.from(pageResult);
+        return PageResponse.from(lineService.findBarcodes(lineId, filter));
     }
 }

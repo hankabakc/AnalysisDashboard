@@ -8,8 +8,4 @@ public record LineSummary(
         String id,
         String status,
         long quantity
-) {
-    public String lineId() {
-        return id;
-    }
-}
+) {}

@@ -15,26 +15,12 @@ public record PageQuery(
     public static final int DEFAULT_SIZE = 50;
     public static final int MAX_SIZE = 200;
 
+    /** Geçersiz değerler hata vermez: sayfa 0'a, boyut 50'ye (en fazla 200), yön "desc"e döner. */
     public static PageQuery of(Integer page, Integer size, String sort) {
-        int normalizedPage = (page == null || page < 0) ? 0 : page;
-
-        int normalizedSize = DEFAULT_SIZE;
-        if (size != null) {
-            if (size < 1) {
-                normalizedSize = DEFAULT_SIZE;
-            } else if (size > MAX_SIZE) {
-                normalizedSize = MAX_SIZE;
-            } else {
-                normalizedSize = size;
-            }
-        }
-
-        String normalizedSort = "desc";
-        if (sort != null && ("asc".equalsIgnoreCase(sort.trim()) || "desc".equalsIgnoreCase(sort.trim()))) {
-            normalizedSort = sort.trim().toLowerCase();
-        }
-
-        return new PageQuery(normalizedPage, normalizedSize, normalizedSort);
+        int p = (page == null || page < 0) ? 0 : page;
+        int s = (size == null || size < 1) ? DEFAULT_SIZE : Math.min(size, MAX_SIZE);
+        String dir = (sort != null && sort.trim().equalsIgnoreCase("asc")) ? "asc" : "desc";
+        return new PageQuery(p, s, dir);
     }
 
     public Pageable toPageable(String primaryProperty, String secondaryProperty) {

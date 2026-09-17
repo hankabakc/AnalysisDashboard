@@ -46,11 +46,4 @@ class DashboardControllerTest {
                 .andExpect(content().string(not(containsString("cdn.jsdelivr.net"))))
                 .andExpect(content().string(containsString("/webjars/bootstrap/")));
     }
-
-    @Test
-    @DisplayName("GET /example: /example rotası mevcut değildir (404 Not Found)")
-    void exampleRotasi404Doner() throws Exception {
-        mvc.perform(get("/example"))
-                .andExpect(status().isNotFound());
-    }
 }

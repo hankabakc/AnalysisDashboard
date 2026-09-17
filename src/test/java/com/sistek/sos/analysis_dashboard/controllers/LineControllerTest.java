@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -35,7 +36,16 @@ class LineControllerTest {
                 .andExpect(content().string(containsString("Hat 1")))
                 .andExpect(content().string(containsString("1319 kayıttan 1-50 arası")))
                 .andExpect(content().string(containsString("Sayfa 1 / 27")))
-                .andExpect(xpath("//table/tbody/tr").nodeCount(50));
+                .andExpect(xpath("//table/tbody/tr").nodeCount(50))
+                // Tarih ham ISO biçiminde (2025-07-08T11:27:51) değil, gg.aa.yyyy SS:dd:ss basılır
+                .andExpect(xpath("//table/tbody/tr[1]/td[2]").string(matchesPattern("\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}:\\d{2}")));
+    }
+
+    @Test
+    @DisplayName("GET /line/999: Olmayan hat 404 döner (API ile tutarlı)")
+    void olmayanHat404Doner() throws Exception {
+        mvc.perform(get("/line/999"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

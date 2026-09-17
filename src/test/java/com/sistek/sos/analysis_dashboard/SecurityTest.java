@@ -107,7 +107,7 @@ class SecurityTest {
     @Test
     @DisplayName("Veritabanındaki parola BCrypt ile doğrulanır (düz metin saklanmadığı kanıtlanır)")
     void parolaBcryptIleDogrulanir() {
-        AppUser admin = appUserRepository.findByUsername("admin")
+        AppUser admin = appUserRepository.findById("admin")
                 .orElseThrow(() -> new AssertionError("admin kullanıcısı veritabanında bulunamadı"));
 
         assertThat(admin.getPassword()).startsWith("$2a$");
@@ -137,6 +137,13 @@ class SecurityTest {
                 .andExpect(jsonPath("$.status", is(401)))
                 .andExpect(jsonPath("$.detail", is("Kullanıcı adı veya parola hatalı.")))
                 .andExpect(jsonPath("$.properties").doesNotExist());
+
+        // Olmayan kullanıcı da aynı 401 ve aynı mesajı alır
+        mvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"olmayan\",\"password\":\"herhangi\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail", is("Kullanıcı adı veya parola hatalı.")));
     }
 
     @Test

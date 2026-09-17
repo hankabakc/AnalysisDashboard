@@ -9,7 +9,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -18,7 +17,6 @@ import java.util.Set;
  * Uygulama kullanıcı varlığı.
  */
 @Getter
-@NoArgsConstructor
 @Entity
 @Table(name = "app_user")
 public class AppUser {
@@ -37,11 +35,4 @@ public class AppUser {
     @CollectionTable(name = "app_user_role", joinColumns = @JoinColumn(name = "username"))
     @Column(name = "role", nullable = false, length = 50)
     private Set<String> roles = new HashSet<>();
-
-    public AppUser(String username, String password, boolean enabled, Set<String> roles) {
-        this.username = username;
-        this.password = password;
-        this.enabled = enabled;
-        this.roles = roles != null ? roles : new HashSet<>();
-    }
 }

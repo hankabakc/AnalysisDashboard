@@ -2,15 +2,12 @@ package com.sistek.sos.analysis_dashboard.services;
 
 import com.sistek.sos.analysis_dashboard.entities.AppUser;
 import com.sistek.sos.analysis_dashboard.repositories.AppUserRepository;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 /**
  * Spring Security için veritabanı destekli kullanıcı detay servisi.
@@ -27,21 +24,14 @@ public class AppUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        AppUser appUser = appUserRepository.findByUsername(username)
+        AppUser appUser = appUserRepository.findById(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı: " + username));
 
-        List<SimpleGrantedAuthority> authorities = appUser.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                .toList();
-
-        return new User(
-                appUser.getUsername(),
-                appUser.getPassword(),
-                appUser.isEnabled(),
-                true,
-                true,
-                true,
-                authorities
-        );
+        // roles(...) her role "ROLE_" önekini kendisi ekler
+        return User.withUsername(appUser.getUsername())
+                .password(appUser.getPassword())
+                .disabled(!appUser.isEnabled())
+                .roles(appUser.getRoles().toArray(String[]::new))
+                .build();
     }
 }

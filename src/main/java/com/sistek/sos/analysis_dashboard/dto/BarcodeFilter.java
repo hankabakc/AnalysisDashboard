@@ -11,30 +11,11 @@ public record BarcodeFilter(
         PageQuery pageQuery
 ) {
     public static BarcodeFilter of(String barcodeQuery, String status, String sort, Integer page, Integer size) {
-        String normalizedBarcodeQuery = null;
-        if (barcodeQuery != null && !barcodeQuery.trim().isEmpty()) {
-            normalizedBarcodeQuery = barcodeQuery.trim();
-        }
-
-        BarcodeStatus normalizedStatus = BarcodeStatus.fromString(status);
-        PageQuery normalizedPageQuery = PageQuery.of(page, size, sort);
-
-        return new BarcodeFilter(normalizedBarcodeQuery, normalizedStatus, normalizedPageQuery);
+        String query = (barcodeQuery == null || barcodeQuery.isBlank()) ? null : barcodeQuery.strip();
+        return new BarcodeFilter(query, BarcodeStatus.fromString(status), PageQuery.of(page, size, sort));
     }
 
     public Pageable toPageable() {
         return pageQuery.toPageable("cre_date", "barcode");
-    }
-
-    public int page() {
-        return pageQuery.page();
-    }
-
-    public int size() {
-        return pageQuery.size();
-    }
-
-    public String sort() {
-        return pageQuery.sort();
     }
 }

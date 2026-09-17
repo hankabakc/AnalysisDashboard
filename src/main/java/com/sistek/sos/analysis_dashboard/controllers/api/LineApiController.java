@@ -1,10 +1,12 @@
 package com.sistek.sos.analysis_dashboard.controllers.api;
 
+import com.sistek.sos.analysis_dashboard.dto.BarcodeFilter;
 import com.sistek.sos.analysis_dashboard.dto.BarcodeRow;
 import com.sistek.sos.analysis_dashboard.dto.LineSummary;
 import com.sistek.sos.analysis_dashboard.dto.LogEntry;
+import com.sistek.sos.analysis_dashboard.dto.PageQuery;
 import com.sistek.sos.analysis_dashboard.dto.api.PageResponse;
-import com.sistek.sos.analysis_dashboard.services.api.LineApiService;
+import com.sistek.sos.analysis_dashboard.services.LineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -25,22 +27,22 @@ import java.util.List;
 @RequestMapping("/api/lines")
 public class LineApiController {
 
-    private final LineApiService lineApiService;
+    private final LineService lineService;
 
-    public LineApiController(LineApiService lineApiService) {
-        this.lineApiService = lineApiService;
+    public LineApiController(LineService lineService) {
+        this.lineService = lineService;
     }
 
     @Operation(summary = "Tüm hat listesini getirir")
     @GetMapping
     public List<LineSummary> getAllLines() {
-        return lineApiService.getAllLines();
+        return lineService.findAll();
     }
 
     @Operation(summary = "ID ile tek bir hat getirir")
     @GetMapping("/{id}")
     public LineSummary getLineById(@Parameter(description = "Hat ID") @PathVariable("id") String id) {
-        return lineApiService.getLineById(id);
+        return lineService.findById(id);
     }
 
     @Operation(summary = "Hatta ait barkodları filtreli ve sayfalı olarak getirir")
@@ -52,7 +54,8 @@ public class LineApiController {
             @Parameter(description = "Sıralama yönü (asc/desc)") @RequestParam(name = "sort", required = false) String sort,
             @Parameter(description = "Sayfa numarası (0 tabanlı)") @RequestParam(name = "page", required = false) Integer page,
             @Parameter(description = "Sayfa boyutu (varsayılan 50, en fazla 200)") @RequestParam(name = "size", required = false) Integer size) {
-        return lineApiService.getLineBarcodes(id, barcodeQuery, status, sort, page, size);
+        BarcodeFilter filter = BarcodeFilter.of(barcodeQuery, status, sort, page, size);
+        return PageResponse.from(lineService.findLineBarcodes(id, filter));
     }
 
     @Operation(summary = "Hat durum loglarını sayfalı olarak getirir")
@@ -64,6 +67,6 @@ public class LineApiController {
             @Parameter(description = "Sayfa numarası (0 tabanlı)") @RequestParam(name = "page", required = false) Integer page,
             @Parameter(description = "Sayfa boyutu (varsayılan 50, en fazla 200)") @RequestParam(name = "size", required = false) Integer size,
             @Parameter(description = "Sıralama yönü (asc/desc)") @RequestParam(name = "sort", required = false) String sort) {
-        return lineApiService.getLineLogs(id, page, size, sort);
+        return PageResponse.from(lineService.findLogs(id, PageQuery.of(page, size, sort)));
     }
 }

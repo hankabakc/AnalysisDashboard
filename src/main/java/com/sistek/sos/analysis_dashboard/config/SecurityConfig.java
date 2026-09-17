@@ -1,12 +1,15 @@
 package com.sistek.sos.analysis_dashboard.config;
 
-import com.sistek.sos.analysis_dashboard.config.security.ApiAccessDeniedHandler;
-import com.sistek.sos.analysis_dashboard.config.security.ApiAuthenticationEntryPoint;
-import com.sistek.sos.analysis_dashboard.services.AppUserDetailsService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sistek.sos.analysis_dashboard.services.JwtService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,33 +18,29 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+
+import java.io.IOException;
+import java.net.URI;
 
 /**
  * Spring Security güvenlik yapılandırması:
  * 1. Zincir (API): /api/** yolları için stateless, JWT tabanlı koruma.
  * 2. Zincir (Web): HTML ekranları için oturum ve form login koruması.
+ *
+ * Kullanıcılar tek UserDetailsService bean'inden (AppUserDetailsService) otomatik bağlanır.
+ * JWT "roles" iddiası → ROLE_ yetkileri eşlemesi application.properties'tedir.
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final AppUserDetailsService userDetailsService;
     private final JwtService jwtService;
-    private final ApiAuthenticationEntryPoint apiAuthenticationEntryPoint;
-    private final ApiAccessDeniedHandler apiAccessDeniedHandler;
+    private final ObjectMapper objectMapper;
 
-    public SecurityConfig(
-            AppUserDetailsService userDetailsService,
-            JwtService jwtService,
-            ApiAuthenticationEntryPoint apiAuthenticationEntryPoint,
-            ApiAccessDeniedHandler apiAccessDeniedHandler) {
-        this.userDetailsService = userDetailsService;
+    public SecurityConfig(JwtService jwtService, ObjectMapper objectMapper) {
         this.jwtService = jwtService;
-        this.apiAuthenticationEntryPoint = apiAuthenticationEntryPoint;
-        this.apiAccessDeniedHandler = apiAccessDeniedHandler;
+        this.objectMapper = objectMapper;
     }
 
     @Bean
@@ -69,12 +68,13 @@ public class SecurityConfig {
                 .anyRequest().hasAnyRole("ADMIN", "APIUSER")
             )
             .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt
-                    .decoder(jwtService.getJwtDecoder())
-                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
-                )
-                .authenticationEntryPoint(apiAuthenticationEntryPoint)
-                .accessDeniedHandler(apiAccessDeniedHandler)
+                .jwt(jwt -> jwt.decoder(jwtService.getJwtDecoder()))
+                .authenticationEntryPoint((request, response, e) -> writeProblem(request, response,
+                        HttpStatus.UNAUTHORIZED, "Yetkilendirme Gerekli",
+                        "Bu uca erişmek için geçerli bir Bearer token gereklidir."))
+                .accessDeniedHandler((request, response, e) -> writeProblem(request, response,
+                        HttpStatus.FORBIDDEN, "Erişim Reddedildi",
+                        "Bu işlem için gerekli yetkiye sahip değilsiniz."))
             );
 
         return http.build();
@@ -87,7 +87,6 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .userDetailsService(userDetailsService)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/login", "/css/**", "/webjars/**", "/error").permitAll()
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").hasRole("ADMIN")
@@ -108,13 +107,16 @@ public class SecurityConfig {
         return http.build();
     }
 
-    private JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
-        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
+    /** API'nin 401/403 yanıtlarını 404 ile aynı RFC 7807 ProblemDetail gövdesiyle yazar. */
+    private void writeProblem(HttpServletRequest request, HttpServletResponse response,
+                              HttpStatus status, String title, String detail) throws IOException {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setTitle(title);
+        problem.setInstance(URI.create(request.getRequestURI()));
 
-        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
-        return jwtAuthenticationConverter;
+        response.setStatus(status.value());
+        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        objectMapper.writeValue(response.getWriter(), problem);
     }
 }

@@ -13,7 +13,7 @@ Veriyi yazan sistem PLC toplayıcıdır; bu uygulama **yalnızca okur**, hiçbir
 | Backend | Spring Boot 3.5.4 · Java 17 |
 | Veri erişimi | Spring Data JPA · PostgreSQL |
 | Şema yönetimi | Flyway (`ddl-auto=validate`) |
-| Arayüz | Thymeleaf (sunucu render) · Bootstrap 5.3.3 · htmx 2.0.4 — hepsi WebJars ile yerel, CDN yok |
+| Arayüz | Thymeleaf (sunucu render) · Bootstrap 5.3.3 — WebJars ile yerel, CDN yok |
 | Test | JUnit 5 · MockMvc · gerçek PostgreSQL |
 
 ---
@@ -38,8 +38,8 @@ Uygulama, veritabanındaki 5 tabloyu dışarıya sunan 8 adet salt okunur JSON R
 
 | Uç | Yöntem | Açıklama | Yanıt |
 | :--- | :--- | :--- | :--- |
-| `/api/plc` | GET | Tanımlı tüm PLC listesi | `List<PlcResponse>` |
-| `/api/plc/{id}` | GET | Tek bir PLC bilgisi | `PlcResponse` (404 ProblemDetail) |
+| `/api/plc` | GET | Tanımlı tüm PLC listesi | `List<PlcSummary>` |
+| `/api/plc/{id}` | GET | Tek bir PLC bilgisi | `PlcSummary` (404 ProblemDetail) |
 | `/api/plc/{id}/logs` | GET | PLC durum değişiklik geçmişi | `PageResponse<LogEntry>` (200 / 404) |
 | `/api/lines` | GET | Tüm hatlar ve toplam barkod adetleri | `List<LineSummary>` |
 | `/api/lines/{id}` | GET | Tek bir hat bilgisi ve ürün adedi | `LineSummary` (404 ProblemDetail) |
@@ -130,45 +130,49 @@ REST API (`/api/**`) uçları stateless ve JWT Bearer token ile korunmaktadır.
 docker run --name gb-postgres -e POSTGRES_PASSWORD=<parola> -p 5435:5432 -d postgres
 ```
 
-Şemayı ve örnek veriyi yükle:
-
-```bash
-docker exec -i gb-postgres psql -U postgres -d postgres < DB/DDL.sql
-```
-
-`DB/` klasöründeki diğer `.sql` dosyaları örnek veridir, aynı şekilde yüklenir.
-
 ### 2. Bağlantı bilgisi
 
-Parola koda gömülü değildir, ortam değişkeninden okunur:
+Parola ve imzalama anahtarı koda gömülü değildir, ortam değişkeninden okunur. Biri bile eksikse uygulama açılmaz:
 
 ```bash
 export DB_PASSWORD=<parola>
+export JWT_SECRET=<en-az-32-karakterlik-rastgele-anahtar>
 ```
 
 Windows PowerShell'de:
 
 ```bash
 $env:DB_PASSWORD = "<parola>"
+$env:JWT_SECRET = "<en-az-32-karakterlik-rastgele-anahtar>"
 ```
 
 Değiştirilebilir diğer değişkenler ve varsayılanları: `DB_PORT` (5435), `DB_USER` (postgres), `DB_NAME` (postgres).
 
-### 3. Uygulama
+### 3. Uygulama (şemayı Flyway kurar)
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-Pano: <http://localhost:8080/dashboard>
+İlk açılışta Flyway tabloları (`V1`) ve geliştirme kullanıcılarını (`V2`) oluşturur. Pano: <http://localhost:8080/dashboard>
 
-### 4. Test
+> ⚠️ `DB/DDL.sql` dosyasını **elle yükleme**. Yalnızca başvuru içindir (PLC toplayıcının şeması, `V1`'in kaynağı). Tablolar elle oluşturulursa Flyway boş olmayan şemayı görüp açılışı reddeder.
+
+### 4. Örnek veri
+
+Uygulama bir kez açılıp tablolar oluştuktan sonra örnek veriyi yükle:
+
+```bash
+for f in DB/*_202507311225.sql; do docker exec -i gb-postgres psql -U postgres -d postgres < "$f"; done
+```
+
+### 5. Test
 
 ```bash
 ./mvnw test
 ```
 
-Testler gerçek PostgreSQL üzerinde çalışır; bellekiçi veritabanı kullanılmaz. Çalıştırmadan önce veritabanının ayakta ve `DB_PASSWORD` değişkeninin tanımlı olması gerekir.
+Testler gerçek PostgreSQL üzerinde, 4. adımdaki örnek veriyle çalışır (ör. Hat 1 → 1319 barkod); bellekiçi veritabanı kullanılmaz. Çalıştırmadan önce veritabanının ayakta ve `DB_PASSWORD` değişkeninin tanımlı olması gerekir. Testlerde `JWT_SECRET` tanımlı değilse `src/test/resources/config/application.properties` içindeki sabit test anahtarı kullanılır.
 
 ---
 

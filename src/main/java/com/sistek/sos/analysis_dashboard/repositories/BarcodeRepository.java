@@ -7,26 +7,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 /**
  * BarcodeData varlığı için veri erişim katmanı.
  */
-@Repository
 public interface BarcodeRepository extends JpaRepository<BarcodeData, BarcodeId> {
 
-    @Query(value = """
-            SELECT b.line_id AS lineId, count(b.barcode) AS quantity
-            FROM barcode_data b
-            GROUP BY b.line_id
-            """, nativeQuery = true)
-    List<LineBarcodeCountProjection> countBarcodesGroupedByLineId();
-
-    @Query(value = "SELECT count(b.barcode) FROM barcode_data b WHERE b.line_id = :lineId", nativeQuery = true)
-    long countByLineId(@Param("lineId") String lineId);
-
+    // CAST(... AS text): PostgreSQL null parametrenin tipini bilemediği için gerekli
     @Query(value = """
             SELECT b.barcode AS barcode, b.line_id AS lineId, b.cre_date AS creDate, b.status AS status
             FROM barcode_data b
