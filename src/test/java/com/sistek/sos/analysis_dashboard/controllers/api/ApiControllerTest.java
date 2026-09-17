@@ -1,16 +1,20 @@
 package com.sistek.sos.analysis_dashboard.controllers.api;
 
+import com.sistek.sos.analysis_dashboard.TestcontainersConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -19,13 +23,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.springframework.security.test.context.support.WithMockUser;
-
 /**
- * REST API Entegrasyon Testleri (T-008).
+ * REST API Entegrasyon Testleri.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestcontainersConfig.class)
 @WithMockUser(roles = "APIUSER")
 class ApiControllerTest {
 
@@ -257,7 +260,7 @@ class ApiControllerTest {
     }
 
     @Test
-    @org.springframework.security.test.context.support.WithMockUser(roles = "ADMIN")
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("GET /v3/api-docs: 200 döner, 8 API yolunu içerir, ekranları ve plcIp sızdırmaz")
     void getApiDocs() throws Exception {
         mvc.perform(get("/v3/api-docs"))
@@ -269,6 +272,8 @@ class ApiControllerTest {
                 .andExpect(jsonPath("$.paths['/api/lines/{id}']").exists())
                 .andExpect(jsonPath("$.paths['/api/lines/{id}/barcodes']").exists())
                 .andExpect(jsonPath("$.paths['/api/lines/{id}/logs']").exists())
+                // Record olarak bağlanan filtre ve sayfa parametreleri Swagger'da tek tek görünür
+                .andExpect(jsonPath("$.paths['/api/lines/{id}/barcodes'].get.parameters[*].name", hasItems("id", "barcodeQuery", "status", "page", "size", "sort")))
                 .andExpect(jsonPath("$.paths['/api/barcodes']").exists())
                 .andExpect(content().string(not(containsString("/dashboard"))))
                 .andExpect(content().string(not(containsString("/line/{lineId}"))))
@@ -277,7 +282,7 @@ class ApiControllerTest {
     }
 
     @Test
-    @org.springframework.security.test.context.support.WithMockUser(roles = "ADMIN")
+    @WithMockUser(roles = "ADMIN")
     @DisplayName("GET /swagger-ui.html: 3xx yönlendirme döner")
     void getSwaggerUi() throws Exception {
         mvc.perform(get("/swagger-ui.html"))

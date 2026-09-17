@@ -1,21 +1,18 @@
 package com.sistek.sos.analysis_dashboard.dto;
 
-import org.springframework.data.domain.Pageable;
+import io.swagger.v3.oas.annotations.Parameter;
 
 /**
- * Barkod arama, filtreleme, sıralama ve sayfalama parametreleri.
+ * Barkod arama ve durum filtresi: ?barcodeQuery=&status=
+ * Controller metoduna doğrudan parametre olarak bağlanır.
+ * Boş arama metni ve geçersiz durum "filtre yok" (null) demektir; hata vermez.
  */
 public record BarcodeFilter(
-        String barcodeQuery,
-        BarcodeStatus status,
-        PageQuery pageQuery
+        @Parameter(description = "Barkod arama sorgusu") String barcodeQuery,
+        @Parameter(description = "Barkod durumu (NEW, SENT, ERROR)") String status
 ) {
-    public static BarcodeFilter of(String barcodeQuery, String status, String sort, Integer page, Integer size) {
-        String query = (barcodeQuery == null || barcodeQuery.isBlank()) ? null : barcodeQuery.strip();
-        return new BarcodeFilter(query, BarcodeStatus.fromString(status), PageQuery.of(page, size, sort));
-    }
-
-    public Pageable toPageable() {
-        return pageQuery.toPageable("cre_date", "barcode");
+    public BarcodeFilter {
+        barcodeQuery = (barcodeQuery == null || barcodeQuery.isBlank()) ? null : barcodeQuery.strip();
+        status = BarcodeStatus.normalize(status);
     }
 }

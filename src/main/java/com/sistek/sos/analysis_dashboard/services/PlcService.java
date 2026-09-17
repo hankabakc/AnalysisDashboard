@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * PLC bilgileri ve PLC durum geçmişi. plc_ip hiçbir dönüşte yer almaz.
@@ -28,11 +29,10 @@ public class PlcService {
         this.plcLogRepository = plcLogRepository;
     }
 
-    /** Pano tek PLC varsayar; tanımlı PLC yoksa null döner. */
-    public PlcSummary findFirst() {
+    /** Pano tek PLC varsayar; tanımlı PLC yoksa boş döner. */
+    public Optional<PlcSummary> findFirst() {
         return plcInfoRepository.findFirstByOrderByPlcIdAsc()
-                .map(PlcService::toSummary)
-                .orElse(null);
+                .map(PlcService::toSummary);
     }
 
     public List<PlcSummary> findAll() {
@@ -47,11 +47,11 @@ public class PlcService {
                 .orElseThrow(() -> notFound(plcId));
     }
 
-    public Page<LogEntry> findLogs(String plcId, PageQuery query) {
+    public Page<LogEntry> findLogs(String plcId, PageQuery pageQuery) {
         if (!plcInfoRepository.existsById(plcId)) {
             throw notFound(plcId);
         }
-        return plcLogRepository.findByIdPlcId(plcId, query.toPageable("procDate", "id.seqNo"))
+        return plcLogRepository.findByIdPlcId(plcId, pageQuery.toPageable("procDate", "id.seqNo"))
                 .map(log -> new LogEntry(log.getId().plcId(), log.getId().seqNo(), log.getProcDate(), log.getStatus()));
     }
 

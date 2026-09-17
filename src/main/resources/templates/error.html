@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<!--
+  Tüm web hataları (404, 403, 500...) için ortak sayfa. Spring Boot bu şablonu /error isteğinde kendisi kullanır.
+  Yalnızca durum kodu gösterilir; hata mesajı ve yığın izi dışarı verilmez.
+-->
+<head th:replace="~{fragments/layout :: head('Hata - Analysis Dashboard')}"></head>
+<body class="bg-light">
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-5">
+    <div class="card shadow-sm border-0 text-center p-4 mx-auto" style="max-width: 520px;">
+        <div class="card-body">
+            <p class="display-4 fw-bold text-muted mb-2" th:text="${status}">404</p>
+            <div th:switch="${status}">
+                <h1 th:case="404" class="h4 mb-4">Sayfa bulunamadı</h1>
+                <h1 th:case="403" class="h4 mb-4">Bu sayfayı görme yetkiniz yok</h1>
+                <h1 th:case="*" class="h4 mb-4">Beklenmeyen bir hata oluştu</h1>
+            </div>
+            <a th:href="@{/dashboard}" class="btn btn-primary">🏭 Panoya Dön</a>
+        </div>
+    </div>
+</main>
+</body>
+</html>

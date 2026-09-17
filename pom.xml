@@ -28,6 +28,8 @@
     </scm>
     <properties>
         <java.version>17</java.version>
+        <!-- Boot 3.5.4 1.21.3 getirir; Docker Engine 29+ (en dusuk API 1.44) icin 1.21.4 gerekir -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
     <dependencies>
         <dependency>
@@ -63,7 +65,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Sema yalnizca migrasyonla degisir; ORM sema uretmez (ENG-08 §3.2, APP-01 §2.5) -->
+        <!-- Sema yalnizca migrasyonla degisir; ORM sema uretmez -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
@@ -73,7 +75,7 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- On yuz varliklari pakete gomulu gelir; dis CDN kullanilmaz (WEB-06 §2.1) -->
+        <!-- On yuz varliklari pakete gomulu gelir; dis CDN kullanilmaz -->
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>bootstrap</artifactId>
@@ -103,6 +105,18 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Testler her koşuda Docker'da temiz bir PostgreSQL açar; paylaşılan veritabanına bağlı değildir -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

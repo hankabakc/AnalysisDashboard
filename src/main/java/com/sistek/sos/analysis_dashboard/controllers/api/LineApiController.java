@@ -11,10 +11,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -49,13 +49,9 @@ public class LineApiController {
     @GetMapping("/{id}/barcodes")
     public PageResponse<BarcodeRow> getLineBarcodes(
             @Parameter(description = "Hat ID") @PathVariable("id") String id,
-            @Parameter(description = "Barkod arama sorgusu") @RequestParam(name = "barcodeQuery", required = false) String barcodeQuery,
-            @Parameter(description = "Barkod durumu (NEW, SENT, ERROR)") @RequestParam(name = "status", required = false) String status,
-            @Parameter(description = "Sıralama yönü (asc/desc)") @RequestParam(name = "sort", required = false) String sort,
-            @Parameter(description = "Sayfa numarası (0 tabanlı)") @RequestParam(name = "page", required = false) Integer page,
-            @Parameter(description = "Sayfa boyutu (varsayılan 50, en fazla 200)") @RequestParam(name = "size", required = false) Integer size) {
-        BarcodeFilter filter = BarcodeFilter.of(barcodeQuery, status, sort, page, size);
-        return PageResponse.from(lineService.findLineBarcodes(id, filter));
+            @ParameterObject BarcodeFilter filter,
+            @ParameterObject PageQuery pageQuery) {
+        return PageResponse.from(lineService.findLineBarcodes(id, filter, pageQuery));
     }
 
     @Operation(summary = "Hat durum loglarını sayfalı olarak getirir")
@@ -64,9 +60,7 @@ public class LineApiController {
     @GetMapping("/{id}/logs")
     public PageResponse<LogEntry> getLineLogs(
             @Parameter(description = "Hat ID") @PathVariable("id") String id,
-            @Parameter(description = "Sayfa numarası (0 tabanlı)") @RequestParam(name = "page", required = false) Integer page,
-            @Parameter(description = "Sayfa boyutu (varsayılan 50, en fazla 200)") @RequestParam(name = "size", required = false) Integer size,
-            @Parameter(description = "Sıralama yönü (asc/desc)") @RequestParam(name = "sort", required = false) String sort) {
-        return PageResponse.from(lineService.findLogs(id, PageQuery.of(page, size, sort)));
+            @ParameterObject PageQuery pageQuery) {
+        return PageResponse.from(lineService.findLogs(id, pageQuery));
     }
 }

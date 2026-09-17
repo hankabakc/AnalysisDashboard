@@ -12,7 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Kök rota yönlendirme testi (WEB-08 §1.1).
+ * Kök rota yönlendirme testi.
  */
 @WebMvcTest(IndexController.class)
 @WithMockUser(roles = "USER")
@@ -23,7 +23,7 @@ class IndexControllerTest {
 
     @Test
     @DisplayName("GET /: Doğrudan /dashboard adresine yönlendirme (3xx redirect) yapar")
-    void kokRotaDashboardaYonlendirir() throws Exception {
+    void rootRedirectsToDashboard() throws Exception {
         mvc.perform(get("/"))
            .andExpect(status().is3xxRedirection())
            .andExpect(redirectedUrl("/dashboard"));

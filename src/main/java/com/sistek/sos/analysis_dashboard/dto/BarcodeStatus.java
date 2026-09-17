@@ -3,26 +3,21 @@ package com.sistek.sos.analysis_dashboard.dto;
 import java.util.Arrays;
 
 /**
- * Barkod işlem durumları enum modeli (Type-Safe Domain Status).
+ * barcode_data.status sütununun alabileceği değerler (veritabanındaki CHECK kısıtıyla aynı).
  */
 public enum BarcodeStatus {
     NEW,
     SENT,
     ERROR;
 
-    /**
-     * Dize değerini güvenli şekilde BarcodeStatus enum sabitine dönüştürür.
-     * Geçersiz veya boş değerler için null döner (filtresiz / hepsi anlamına gelir).
-     *
-     * @param value Durum metni
-     * @return Eşleşen BarcodeStatus veya null
-     */
-    public static BarcodeStatus fromString(String value) {
-        if (value == null || value.trim().isEmpty()) {
+    /** Büyük/küçük harf fark etmeksizin geçerli bir durumsa adını (ör. "ERROR"), değilse null döner. */
+    public static String normalize(String value) {
+        if (value == null) {
             return null;
         }
         return Arrays.stream(values())
-                .filter(status -> status.name().equalsIgnoreCase(value.trim()))
+                .map(Enum::name)
+                .filter(name -> name.equalsIgnoreCase(value.strip()))
                 .findFirst()
                 .orElse(null);
     }

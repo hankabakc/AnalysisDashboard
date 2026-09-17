@@ -1,10 +1,12 @@
 package com.sistek.sos.analysis_dashboard.controllers;
 
+import com.sistek.sos.analysis_dashboard.TestcontainersConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -16,10 +18,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.xpath;
 
 /**
- * Genel Pano Şablon Render ve Entegrasyon Testleri (WEB-08 §1.1, §1.4).
+ * Genel Pano Şablon Render ve Entegrasyon Testleri.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestcontainersConfig.class)
 @WithMockUser(roles = "USER")
 class DashboardControllerTest {
 
@@ -28,7 +31,7 @@ class DashboardControllerTest {
 
     @Test
     @DisplayName("GET /dashboard: 192.168.1.181, ACTIVE ve 5 hattın adetlerini hat kartı bazında kesin doğrular")
-    void dashboardSayfasiPlcVeHatSayimlariniEksiksizBasar() throws Exception {
+    void dashboardShowsPlcAndLineCounts() throws Exception {
         mvc.perform(get("/dashboard"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("192.168.1.181")))
@@ -42,7 +45,7 @@ class DashboardControllerTest {
                 // Hat kartlarının /line/{id} bağlantıları
                 .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='1']]/@href").string("/line/1"))
                 .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='5']]/@href").string("/line/5"))
-                // WEB-06 §2.1: Dış CDN kullanılmaz
+                // Dış CDN kullanılmaz; varlıklar WebJar olarak pakete gömülü
                 .andExpect(content().string(not(containsString("cdn.jsdelivr.net"))))
                 .andExpect(content().string(containsString("/webjars/bootstrap/")));
     }

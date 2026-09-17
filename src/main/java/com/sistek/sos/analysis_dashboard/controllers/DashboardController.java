@@ -19,7 +19,8 @@ public class DashboardController {
 
     @GetMapping("/dashboard")
     public String dashboardPage(Model model) {
-        model.addAttribute("plc", plcService.findFirst());
+        // Şablon PLC yoksa (null) "Tanımlı PLC bulunamadı" mesajı gösterir
+        model.addAttribute("plc", plcService.findFirst().orElse(null));
         model.addAttribute("lines", lineService.findAll());
         return "dashboard";
     }

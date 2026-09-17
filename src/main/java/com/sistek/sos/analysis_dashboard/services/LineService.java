@@ -46,21 +46,21 @@ public class LineService {
     }
 
     /** Tek bir hattın barkodları; hat yoksa 404. */
-    public Page<BarcodeRow> findLineBarcodes(String lineId, BarcodeFilter filter) {
+    public Page<BarcodeRow> findLineBarcodes(String lineId, BarcodeFilter filter, PageQuery pageQuery) {
         requireExists(lineId);
-        return findBarcodes(lineId, filter);
+        return findBarcodes(lineId, filter, pageQuery);
     }
 
     /** Genel barkod araması; lineId null ise tüm hatlarda arar. */
-    public Page<BarcodeRow> findBarcodes(String lineId, BarcodeFilter filter) {
-        String status = filter.status() != null ? filter.status().name() : null;
-        return barcodeRepository.search(lineId, filter.barcodeQuery(), status, filter.toPageable())
+    public Page<BarcodeRow> findBarcodes(String lineId, BarcodeFilter filter, PageQuery pageQuery) {
+        // Sorgu native SQL olduğu için sıralama alanları tablo sütun adlarıdır
+        return barcodeRepository.search(lineId, filter.barcodeQuery(), filter.status(), pageQuery.toPageable("cre_date", "barcode"))
                 .map(b -> new BarcodeRow(b.getBarcode(), b.getLineId(), b.getCreDate(), b.getStatus()));
     }
 
-    public Page<LogEntry> findLogs(String lineId, PageQuery query) {
+    public Page<LogEntry> findLogs(String lineId, PageQuery pageQuery) {
         requireExists(lineId);
-        return lineLogRepository.findByIdLineId(lineId, query.toPageable("procDate", "id.seqNo"))
+        return lineLogRepository.findByIdLineId(lineId, pageQuery.toPageable("procDate", "id.seqNo"))
                 .map(log -> new LogEntry(log.getId().lineId(), log.getId().seqNo(), log.getProcDate(), log.getStatus()));
     }
 

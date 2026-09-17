@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,10 +32,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.xpath;
 
 /**
- * Spring Security kimlik doğrulama, JWT ve yetkilendirme testleri (T-014, T-015).
+ * Spring Security kimlik doğrulama, JWT ve yetkilendirme testleri.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestcontainersConfig.class)
 class SecurityTest {
 
     @Autowired
@@ -51,7 +53,7 @@ class SecurityTest {
 
     @Test
     @DisplayName("Kimlik doğrulamasız GET /dashboard: 302 döner ve /login adresine yönlendirir")
-    void kimliksizDashboardLoginYollar() throws Exception {
+    void anonymousDashboardRedirectsToLogin() throws Exception {
         mvc.perform(get("/dashboard"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("**/login"));
@@ -59,7 +61,7 @@ class SecurityTest {
 
     @Test
     @DisplayName("GET /login: Kimlik doğrulamasız 200 OK döner")
-    void loginSayfasiHerkeseAciktir() throws Exception {
+    void loginPageIsPublic() throws Exception {
         mvc.perform(get("/login"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Analysis Dashboard")));
@@ -68,7 +70,7 @@ class SecurityTest {
     @Test
     @WithMockUser(roles = "USER")
     @DisplayName("@WithMockUser(roles='USER'): GET /dashboard 200 döner, GET /line/1 200 ve 50 satır + sayfalama basar")
-    void userRoluDashboardVeHatSayfasinaErisir() throws Exception {
+    void userRoleCanOpenWebPages() throws Exception {
         mvc.perform(get("/dashboard"))
                 .andExpect(status().isOk());
 
@@ -80,7 +82,7 @@ class SecurityTest {
     @Test
     @WithMockUser(roles = "APIUSER")
     @DisplayName("@WithMockUser(roles='APIUSER'): GET /dashboard 403 Forbidden döner (API kullanıcısı web sayfası açamaz)")
-    void apiUserRoluWebSayfasiAcamaz() throws Exception {
+    void apiUserRoleCannotOpenWebPages() throws Exception {
         mvc.perform(get("/dashboard"))
                 .andExpect(status().isForbidden());
     }
@@ -88,7 +90,7 @@ class SecurityTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     @DisplayName("@WithMockUser(roles='ADMIN'): GET /dashboard 200 ve GET /v3/api-docs 200 döner")
-    void adminRoluHerYereErisir() throws Exception {
+    void adminRoleCanOpenEverything() throws Exception {
         mvc.perform(get("/dashboard"))
                 .andExpect(status().isOk());
 
@@ -99,14 +101,14 @@ class SecurityTest {
     @Test
     @WithMockUser(roles = "USER")
     @DisplayName("@WithMockUser(roles='USER'): GET /v3/api-docs 403 Forbidden döner (Swagger/OpenAPI yalnız ADMIN)")
-    void userRoluOpenApiyeErisemez() throws Exception {
+    void userRoleCannotOpenApiDocs() throws Exception {
         mvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @DisplayName("Veritabanındaki parola BCrypt ile doğrulanır (düz metin saklanmadığı kanıtlanır)")
-    void parolaBcryptIleDogrulanir() {
+    void passwordsAreStoredAsBcrypt() {
         AppUser admin = appUserRepository.findById("admin")
                 .orElseThrow(() -> new AssertionError("admin kullanıcısı veritabanında bulunamadı"));
 
@@ -116,7 +118,7 @@ class SecurityTest {
 
     @Test
     @DisplayName("POST /api/auth/login apiuser ile: 200 döner ve geçerli JWT döner")
-    void apiLoginBasarili() throws Exception {
+    void apiLoginReturnsToken() throws Exception {
         mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"apiuser\",\"password\":\"apiuser123\"}"))
@@ -128,7 +130,7 @@ class SecurityTest {
 
     @Test
     @DisplayName("POST /api/auth/login yanlış parola ile: 401 ProblemDetail döner (kullanıcı varlığı sızdırmaz)")
-    void apiLoginYanlisParola401() throws Exception {
+    void apiLoginWithBadCredentialsReturns401() throws Exception {
         mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"apiuser\",\"password\":\"wrongpassword\"}"))
@@ -148,7 +150,7 @@ class SecurityTest {
 
     @Test
     @DisplayName("GET /api/lines token'sız: 401 ProblemDetail döner, HTML login'e yönlendirmez")
-    void apiTokensizErisim401ProblemDetail() throws Exception {
+    void apiWithoutTokenReturns401ProblemDetail() throws Exception {
         mvc.perform(get("/api/lines"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -160,7 +162,7 @@ class SecurityTest {
 
     @Test
     @DisplayName("GET /api/lines APIUSER JWT ile: 200 döner ve 1319·6·14·2325·2 miktarlarını basar")
-    void apiLinesApiUserTokenIleErisir() throws Exception {
+    void apiUserTokenCanReadLines() throws Exception {
         String token = createJwtToken("apiuser", List.of("ROLE_APIUSER"));
 
         mvc.perform(get("/api/lines")
@@ -172,7 +174,7 @@ class SecurityTest {
 
     @Test
     @DisplayName("GET /api/lines USER JWT ile: 403 ProblemDetail döner (USER API çağıramaz)")
-    void apiLinesUserTokenIle403() throws Exception {
+    void userTokenGets403OnApi() throws Exception {
         String token = createJwtToken("user", List.of("ROLE_USER"));
 
         mvc.perform(get("/api/lines")
@@ -185,7 +187,7 @@ class SecurityTest {
 
     @Test
     @DisplayName("GET /api/lines ADMIN JWT ile: 200 döner")
-    void apiLinesAdminTokenIleErisir() throws Exception {
+    void adminTokenCanReadLines() throws Exception {
         String token = createJwtToken("admin", List.of("ROLE_ADMIN"));
 
         mvc.perform(get("/api/lines")
@@ -196,7 +198,7 @@ class SecurityTest {
 
     @Test
     @DisplayName("GET /api/lines geçersiz JWT ile: 401 ProblemDetail döner")
-    void apiLinesGecersizToken401() throws Exception {
+    void invalidTokenReturns401() throws Exception {
         mvc.perform(get("/api/lines")
                         .header("Authorization", "Bearer invalid.jwt.token"))
                 .andExpect(status().isUnauthorized())

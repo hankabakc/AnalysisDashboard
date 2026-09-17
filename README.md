@@ -14,7 +14,7 @@ Veriyi yazan sistem PLC toplayıcıdır; bu uygulama **yalnızca okur**, hiçbir
 | Veri erişimi | Spring Data JPA · PostgreSQL |
 | Şema yönetimi | Flyway (`ddl-auto=validate`) |
 | Arayüz | Thymeleaf (sunucu render) · Bootstrap 5.3.3 — WebJars ile yerel, CDN yok |
-| Test | JUnit 5 · MockMvc · gerçek PostgreSQL |
+| Test | JUnit 5 · MockMvc · Testcontainers (Docker içinde gerçek PostgreSQL) |
 
 ---
 
@@ -74,7 +74,7 @@ Uygulama, Spring Security ile korunmakta olup rol bazlı erişim denetimi (RBAC)
 
 ### Geliştirme Ortamı Varsayılan Kullanıcıları
 
-> ⚠️ **Önemli:** Aşağıdaki kullanıcılar yalnızca geliştirme ve test ortamı içindir. Canlı/üretim ortamında parolalar mutlaka değiştirilmelidir.
+> ⚠️ **Önemli:** Bu kullanıcılar **yalnızca `dev` profiliyle ve testlerde** yüklenir (`src/main/resources/db/dev/afterMigrate__dev_users.sql`). Profil verilmeden açılan uygulamada (canlı ortam) hiçbir kullanıcı otomatik oluşmaz; `V3` migrasyonu eski sürümün eklediği bu hesapları da siler.
 
 | Kullanıcı Adı | Parola | Rol |
 | :--- | :--- | :--- |
@@ -150,11 +150,13 @@ Değiştirilebilir diğer değişkenler ve varsayılanları: `DB_PORT` (5435), `
 
 ### 3. Uygulama (şemayı Flyway kurar)
 
+Geliştirme ortamında `dev` profiliyle çalıştır:
+
 ```bash
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-İlk açılışta Flyway tabloları (`V1`) ve geliştirme kullanıcılarını (`V2`) oluşturur. Pano: <http://localhost:8080/dashboard>
+İlk açılışta Flyway tabloları kurar; `dev` profili yukarıdaki geliştirme kullanıcılarını ekler. Pano: <http://localhost:8080/dashboard>
 
 > ⚠️ `DB/DDL.sql` dosyasını **elle yükleme**. Yalnızca başvuru içindir (PLC toplayıcının şeması, `V1`'in kaynağı). Tablolar elle oluşturulursa Flyway boş olmayan şemayı görüp açılışı reddeder.
 
@@ -163,7 +165,7 @@ Değiştirilebilir diğer değişkenler ve varsayılanları: `DB_PORT` (5435), `
 Uygulama bir kez açılıp tablolar oluştuktan sonra örnek veriyi yükle:
 
 ```bash
-for f in DB/*_202507311225.sql; do docker exec -i gb-postgres psql -U postgres -d postgres < "$f"; done
+for f in src/test/resources/db/sample-data/*.sql; do docker exec -i gb-postgres psql -U postgres -d postgres < "$f"; done
 ```
 
 ### 5. Test
@@ -172,7 +174,7 @@ for f in DB/*_202507311225.sql; do docker exec -i gb-postgres psql -U postgres -
 ./mvnw test
 ```
 
-Testler gerçek PostgreSQL üzerinde, 4. adımdaki örnek veriyle çalışır (ör. Hat 1 → 1319 barkod); bellekiçi veritabanı kullanılmaz. Çalıştırmadan önce veritabanının ayakta ve `DB_PASSWORD` değişkeninin tanımlı olması gerekir. Testlerde `JWT_SECRET` tanımlı değilse `src/test/resources/config/application.properties` içindeki sabit test anahtarı kullanılır.
+Testler yalnızca **Docker** ister: her koşuda Testcontainers ile geçici bir PostgreSQL açılır, Flyway şemayı, geliştirme kullanıcılarını ve `src/test/resources/db/sample-data` altındaki örnek veriyi yükler (ör. Hat 1 → 1319 barkod). Yerel `gb-postgres` veritabanına dokunulmaz; `DB_PASSWORD` ve `JWT_SECRET` gerekmez.
 
 ---
 
