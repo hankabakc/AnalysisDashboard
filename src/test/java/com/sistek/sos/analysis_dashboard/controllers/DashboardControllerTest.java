@@ -49,4 +49,33 @@ class DashboardControllerTest {
                 .andExpect(content().string(not(containsString("cdn.jsdelivr.net"))))
                 .andExpect(content().string(containsString("/webjars/bootstrap/")));
     }
+
+    @Test
+    @DisplayName("GET /dashboard: veri alanı /fragments/dashboard ile tazelenir; aralık 5 sn, bayatlık 15 sn, zaman aşımı 4 sn; uyarı başta gizli")
+    void dashboardPageIsWiredForRefresh() throws Exception {
+        mvc.perform(get("/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string("/fragments/dashboard"))
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-sync").string("this:drop"))
+                .andExpect(xpath("//script[contains(@src, '/webjars/htmx.org/')]").exists())
+                .andExpect(xpath("//script[@src='/js/refresh.js']/@data-refresh-ms").string("5000"))
+                .andExpect(xpath("//script[@src='/js/refresh.js']/@data-stale-ms").string("15000"))
+                .andExpect(xpath("//script[@src='/js/refresh.js']/@data-timeout-ms").string("4000"))
+                .andExpect(xpath("//div[@id='stale-banner']/@hidden").exists())
+                .andExpect(xpath("//div[@id='stale-banner']").string(containsString("Veriler güncel değil")));
+    }
+
+    @Test
+    @DisplayName("GET /fragments/dashboard: yalnızca veri alanını (PLC + hat adetleri + son güncelleme) döner; menü ve sayfa iskeleti yok")
+    void dashboardFragmentRendersDataOnly() throws Exception {
+        mvc.perform(get("/fragments/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("192.168.1.181")))
+                .andExpect(content().string(containsString("Son güncelleme:")))
+                .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='1']]//div[contains(@class, 'display-6')]").string("1319"))
+                .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='4']]//div[contains(@class, 'display-6')]").string("2325"))
+                .andExpect(content().string(not(containsString("<nav"))))
+                .andExpect(content().string(not(containsString("<head"))))
+                .andExpect(content().string(not(containsString("refresh.js"))));
+    }
 }

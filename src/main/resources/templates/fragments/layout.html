@@ -30,5 +30,27 @@
         </div>
     </div>
 </nav>
+
+<!--
+  "Veriler guncel degil" uyarisi. refresh.js gosterir/gizler; yalnizca renkle degil metinle de uyarir.
+  Not: bu elemana d-flex gibi display siniflari verilmez, yoksa "hidden" ozniteligi calismaz.
+-->
+<div th:fragment="staleBanner" id="stale-banner" class="alert alert-warning shadow-sm" role="status" hidden="hidden">
+    <span aria-hidden="true">⚠️</span>
+    <strong>Veriler güncel değil.</strong>
+    <span id="stale-seconds">0</span> saniyedir sunucudan yanıt alınamıyor; ekrandaki son bilinen durumdur.
+</div>
+
+<!--
+  Periyodik tazeleme betikleri: yalnizca tazelenen sayfalar (pano, hat) ekler.
+  Ayarlar sunucudan (RefreshSettings) gelir; model "refresh" icermelidir.
+-->
+<th:block th:fragment="refreshScripts">
+    <script defer="defer" th:src="@{/webjars/htmx.org/2.0.4/dist/htmx.min.js}"></script>
+    <script defer="defer" th:src="@{/js/refresh.js}"
+            th:data-refresh-ms="${refresh.intervalMs()}"
+            th:data-stale-ms="${refresh.staleMs()}"
+            th:data-timeout-ms="${refresh.timeoutMs()}"></script>
+</th:block>
 </body>
 </html>

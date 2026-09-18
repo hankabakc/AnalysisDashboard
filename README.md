@@ -13,7 +13,7 @@ Veriyi yazan sistem PLC toplayıcıdır; bu uygulama **yalnızca okur**, hiçbir
 | Backend | Spring Boot 3.5.4 · Java 17 |
 | Veri erişimi | Spring Data JPA · PostgreSQL |
 | Şema yönetimi | Flyway (`ddl-auto=validate`) |
-| Arayüz | Thymeleaf (sunucu render) · Bootstrap 5.3.3 — WebJars ile yerel, CDN yok |
+| Arayüz | Thymeleaf (sunucu render) · Bootstrap 5.3.3 · htmx 2.0.4 (periyodik tazeleme) — WebJars ile yerel, CDN yok |
 | Test | JUnit 5 · MockMvc · Testcontainers (Docker içinde gerçek PostgreSQL) |
 
 ---
@@ -23,6 +23,27 @@ Veriyi yazan sistem PLC toplayıcıdır; bu uygulama **yalnızca okur**, hiçbir
 **`/dashboard`** — PLC'nin kimliği ve durumu; altında her üretim hattının kimliği, durumu ve o hattan geçen toplam ürün adedi.
 
 **`/line/{lineId}`** — Seçilen hattan geçen ürünlerin listesi: barkod, zaman ve durum. Sayfalama (50 kayıt), tarihe göre artan/azalan sıralama, barkoda göre arama ve duruma göre (NEW / SENT / ERROR) süzme.
+
+### Canlı tazeleme
+
+İki ekran da sayfa yenilenmeden kendini günceller: pano PLC ve hat kartlarını, hat sayfası barkod tablosunu (seçili filtre ve sayfayla; arama kutusuna dokunulmaz). Her tazelenen alanda "Son güncelleme" saati görünür.
+
+| Durum | Ekranda ne olur |
+| :--- | :--- |
+| Normal | Veri 5 sn'de bir sunucudan yeniden çekilir (`/fragments/dashboard`, `/fragments/line/{id}`) |
+| Sunucu/ağ hatası | Son veri ekranda **kalır**; 15 sn yanıt gelmezse soluklaşır ve "Veriler güncel değil — N saniyedir yanıt alınamıyor" uyarısı çıkar. Deneme aralığı 5 → 10 → 20 → 40 → 60 sn diye uzar |
+| Sunucu geri gelir | İlk başarılı yanıtta uyarı kaybolur, aralık 5 sn'ye döner |
+| Oturum düşmüş (ör. sunucu yeniden başladı) | Sayfa yenilenir ve giriş ekranına gidilir |
+| Sekme arka planda | İstek atılmaz; sekmeye dönünce hemen tazelenir |
+
+Ayarlar `application.properties` içindedir; aralığı düşürmeden önce ekran sayısıyla çarpılan yükü hesaplayın (5 sn × 20 ekran = saniyede 4 istek):
+
+```properties
+dashboard.refresh.interval=5s
+dashboard.refresh.stale-after-intervals=3
+```
+
+İstemci tarafı `src/main/resources/static/js/refresh.js`, sunucu tarafı `config/RefreshSettings.java` ve `templates/fragments/` altındadır.
 
 ---
 

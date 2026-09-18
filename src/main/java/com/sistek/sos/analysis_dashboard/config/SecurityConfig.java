@@ -18,7 +18,9 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
 import java.io.IOException;
 import java.net.URI;
@@ -86,13 +88,24 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
+        AuthenticationEntryPoint loginPage = new LoginUrlAuthenticationEntryPoint("/login");
+
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/login", "/webjars/**", "/error").permitAll()
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").hasRole("ADMIN")
-                .requestMatchers("/dashboard", "/line/**", "/").hasAnyRole("ADMIN", "USER")
+                .requestMatchers("/dashboard", "/line/**", "/fragments/**", "/").hasAnyRole("ADMIN", "USER")
                 .anyRequest().authenticated()
             )
+            // Oturum yoksa normal istek giriş sayfasına yönlenir. htmx tazeleme isteği (HX-Request) ise 401 alır;
+            // yönlenseydi giriş sayfasının HTML'i veri alanının içine basılırdı. refresh.js 401'de sayfayı yeniler.
+            .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, e) -> {
+                if ("true".equals(request.getHeader("HX-Request"))) {
+                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                } else {
+                    loginPage.commence(request, response, e);
+                }
+            }))
             .formLogin(form -> form
                 .loginPage("/login")
                 .defaultSuccessUrl("/dashboard", true)

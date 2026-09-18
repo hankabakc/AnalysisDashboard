@@ -60,6 +60,18 @@ class SecurityTest {
     }
 
     @Test
+    @DisplayName("Oturumsuz htmx tazeleme isteği (HX-Request) 401 alır; giriş sayfasına yönlenip HTML'i veri alanına basmaz")
+    void anonymousRefreshRequestGets401() throws Exception {
+        mvc.perform(get("/fragments/dashboard").header("HX-Request", "true"))
+                .andExpect(status().isUnauthorized());
+
+        // htmx dışı normal istek eskisi gibi giriş sayfasına yönlenir
+        mvc.perform(get("/fragments/dashboard"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("**/login"));
+    }
+
+    @Test
     @DisplayName("GET /login: Kimlik doğrulamasız 200 OK döner")
     void loginPageIsPublic() throws Exception {
         mvc.perform(get("/login"))
@@ -84,6 +96,8 @@ class SecurityTest {
     @DisplayName("@WithMockUser(roles='APIUSER'): GET /dashboard 403 Forbidden döner (API kullanıcısı web sayfası açamaz)")
     void apiUserRoleCannotOpenWebPages() throws Exception {
         mvc.perform(get("/dashboard"))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/fragments/dashboard"))
                 .andExpect(status().isForbidden());
     }
 

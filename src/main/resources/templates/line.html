@@ -7,24 +7,14 @@
 <main class="container-fluid px-4 py-3">
     <!-- Sayfa Başlığı ve Panoya Dönüş Butonu -->
     <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-        <div>
-            <h1 class="h3 fw-bold mb-1" th:text="'Hat ' + ${lineId}">Hat 1</h1>
-            <p th:if="${barcodes.totalElements > 0}" class="text-muted mb-0"
-               th:text="${barcodes.totalElements} + ' kayıttan ' + ${barcodes.number * barcodes.size + 1} + '-' + ${barcodes.number * barcodes.size + barcodes.numberOfElements} + ' arası'">
-                1319 kayıttan 1-50 arası
-            </p>
-            <p th:if="${barcodes.totalElements == 0}" class="text-muted mb-0">
-                0 kayıt bulundu
-            </p>
-        </div>
-        <div>
-            <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
-                🏭 Panoya Dön
-            </a>
-        </div>
+        <h1 class="h3 fw-bold mb-0" th:text="'Hat ' + ${lineId}">Hat 1</h1>
+        <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+            🏭 Panoya Dön
+        </a>
     </div>
 
-    <!-- Filtreleme Çubuğu: yeni arama ilk sayfadan başlar, sıralama ve sayfa boyutu korunur -->
+    <!-- Filtreleme Çubuğu: tazelenmez (yazılan arama metni kaybolmasın). Yeni arama ilk sayfadan başlar,
+         sıralama ve sayfa boyutu korunur. -->
     <div class="card shadow-sm border bg-white mb-4">
         <div class="card-body p-3">
             <form method="get" th:action="@{/line/{id}(id=${lineId})}" class="row g-2 align-items-center">
@@ -50,68 +40,15 @@
         </div>
     </div>
 
-    <!-- Boş Durum: Kayıt Yoksa -->
-    <div th:if="${barcodes.totalElements == 0}" class="alert alert-info shadow-sm" role="status">
-        Filtreye uygun kayıt bulunamadı.
-    </div>
+    <div th:replace="~{fragments/layout :: staleBanner}"></div>
 
-    <!-- Barkod Tablosu ve Sayfalama -->
-    <div th:if="${barcodes.totalElements > 0}" class="card shadow-sm border bg-white mb-4">
-        <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0 align-middle">
-                <thead class="table-light">
-                <tr>
-                    <th scope="col" class="py-3">BARKOD</th>
-                    <th scope="col" class="py-3">
-                        <a th:href="@{/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, size=${pageQuery.size}, sort=${pageQuery.sort == 'desc' ? 'asc' : 'desc'})}"
-                           class="text-decoration-none text-dark d-inline-flex align-items-center gap-1">
-                            <span>ZAMAN</span>
-                            <span th:text="${pageQuery.sort == 'asc' ? '▲' : '▼'}">▼</span>
-                        </a>
-                    </th>
-                    <th scope="col" class="py-3">DURUM</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="item : ${barcodes.content}">
-                    <td class="font-monospace fw-semibold" th:text="${item.barcode}">GU128252503392</td>
-                    <td th:text="${#temporals.format(item.creDate, 'dd.MM.yyyy HH:mm:ss')}">08.07.2025 11:27:51</td>
-                    <td>
-                        <span class="badge bg-secondary py-1 px-2" th:text="${item.status}">ERROR</span>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        <!-- Sayfalayıcı Alt Çubuğu -->
-        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
-            <div>
-                <a th:if="${barcodes.hasPrevious()}"
-                   th:href="@{/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${barcodes.number - 1})}"
-                   class="btn btn-outline-primary btn-sm">
-                    ‹ Önceki
-                </a>
-                <button th:unless="${barcodes.hasPrevious()}"
-                        class="btn btn-outline-secondary btn-sm" disabled="disabled">
-                    ‹ Önceki
-                </button>
-            </div>
-            <div class="text-muted small">
-                <span th:text="'Sayfa ' + ${barcodes.number + 1} + ' / ' + ${barcodes.totalPages}">Sayfa 1 / 27</span>
-            </div>
-            <div>
-                <a th:if="${barcodes.hasNext()}"
-                   th:href="@{/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${barcodes.number + 1})}"
-                   class="btn btn-outline-primary btn-sm">
-                    Sonraki ›
-                </a>
-                <button th:unless="${barcodes.hasNext()}"
-                        class="btn btn-outline-secondary btn-sm" disabled="disabled">
-                    Sonraki ›
-                </button>
-            </div>
-        </div>
+    <!-- Tazelenen alan: aynı filtre ve sayfayla /fragments/line/{id} çekilir -->
+    <div th:hx-get="@{/fragments/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${pageQuery.page})}"
+         hx-trigger="refresh" hx-swap="innerHTML" hx-sync="this:drop">
+        <div th:replace="~{fragments/barcode-table :: barcodeTable}"></div>
     </div>
 </main>
+
+<th:block th:replace="~{fragments/layout :: refreshScripts}"></th:block>
 </body>
 </html>

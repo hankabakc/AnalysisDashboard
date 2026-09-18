@@ -52,6 +52,34 @@ class LineControllerTest {
     void unknownLineReturns404() throws Exception {
         mvc.perform(get("/line/999"))
                 .andExpect(status().isNotFound());
+        mvc.perform(get("/fragments/line/999"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /line/1?barcodeQuery=GU132&status=ERROR: tablo aynı filtre ve sayfayla tazelenir; arama formu tazelenen alanın dışında")
+    void linePageRefreshKeepsFilters() throws Exception {
+        mvc.perform(get("/line/1").param("barcodeQuery", "GU132").param("status", "error"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string(containsString("/fragments/line/1?")))
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string(containsString("barcodeQuery=GU132")))
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string(containsString("status=ERROR")))
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string(containsString("page=0")))
+                .andExpect(xpath("//div[@hx-trigger='refresh']//form").doesNotExist())
+                .andExpect(xpath("//script[@src='/js/refresh.js']/@data-refresh-ms").string("5000"));
+    }
+
+    @Test
+    @DisplayName("GET /fragments/line/1?barcodeQuery=GU132: yalnızca sayı + tablo + sayfalayıcı döner; menü ve arama formu yok")
+    void barcodeTableFragmentRendersTableOnly() throws Exception {
+        mvc.perform(get("/fragments/line/1").param("barcodeQuery", "GU132"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("172 kayıttan 1-50 arası")))
+                .andExpect(content().string(containsString("Son güncelleme:")))
+                .andExpect(xpath("//table/tbody/tr").nodeCount(50))
+                .andExpect(xpath("//a[contains(text(), 'Sonraki')]/@href").string(containsString("barcodeQuery=GU132")))
+                .andExpect(content().string(not(containsString("<nav"))))
+                .andExpect(content().string(not(containsString("<form"))));
     }
 
     @Test
