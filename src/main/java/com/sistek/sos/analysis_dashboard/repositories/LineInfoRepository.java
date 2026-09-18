@@ -12,11 +12,12 @@ import java.util.Optional;
 /**
  * LineInfo varlığı için veri erişim katmanı.
  * Hat özeti ve barkod adedi tek sorguda gelir (hat başına ayrı sayım sorgusu yok).
+ * Seçilen üç değer, sırasıyla LineSummary(id, status, quantity) record'una Spring Data tarafından doldurulur.
  */
 public interface LineInfoRepository extends JpaRepository<LineInfo, String> {
 
     @Query("""
-            SELECT new com.sistek.sos.analysis_dashboard.dto.LineSummary(l.lineId, l.status, count(b.id.barcode))
+            SELECT l.lineId, l.status, count(b.id.barcode)
             FROM LineInfo l LEFT JOIN BarcodeData b ON b.id.lineId = l.lineId
             GROUP BY l.lineId, l.status
             ORDER BY l.lineId
@@ -24,7 +25,7 @@ public interface LineInfoRepository extends JpaRepository<LineInfo, String> {
     List<LineSummary> findSummaries();
 
     @Query("""
-            SELECT new com.sistek.sos.analysis_dashboard.dto.LineSummary(l.lineId, l.status, count(b.id.barcode))
+            SELECT l.lineId, l.status, count(b.id.barcode)
             FROM LineInfo l LEFT JOIN BarcodeData b ON b.id.lineId = l.lineId
             WHERE l.lineId = :lineId
             GROUP BY l.lineId, l.status
