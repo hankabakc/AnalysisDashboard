@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 @Table(name = "barcode_data")
 public class BarcodeData {
 
+
+
     @EmbeddedId
     private BarcodeId id;
 

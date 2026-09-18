@@ -14,9 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Genel barkod REST API denetleyicisi.
- */
 @Tag(name = "Barkodlar", description = "Genel barkod arama ve listeleme uçları")
 @RestController
 @RequestMapping("/api/barcodes")
@@ -37,3 +34,6 @@ public class BarcodeApiController {
         return PageResponse.from(lineService.findBarcodes(lineId, filter, pageQuery));
     }
 }
+
+
+

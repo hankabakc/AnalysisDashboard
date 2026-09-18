@@ -21,7 +21,7 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * JWT token üretme ve imzalama servisi.
+ * JWT token üretme, imzalama (HS256) ve doğrulama servisi.
  */
 @Service
 public class JwtService {
@@ -39,6 +39,7 @@ public class JwtService {
         this.jwtDecoder = NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(MacAlgorithm.HS256).build();
     }
 
+    /** Kullanıcı ve rollerini içeren imzalı JWT üretir. */
     public String generateToken(Authentication authentication) {
         Instant now = Instant.now();
         List<String> roles = authentication.getAuthorities().stream()
@@ -66,3 +67,5 @@ public class JwtService {
         return expirationSeconds;
     }
 }
+
+

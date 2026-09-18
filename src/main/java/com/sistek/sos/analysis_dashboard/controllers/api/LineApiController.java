@@ -19,9 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Hat ve hat barkodları REST API denetleyicisi.
- */
 @Tag(name = "Hatlar", description = "Hat bilgileri, barkod ve log uçları")
 @RestController
 @RequestMapping("/api/lines")
@@ -64,3 +61,6 @@ public class LineApiController {
         return PageResponse.from(lineService.findLogs(id, pageQuery));
     }
 }
+
+
+

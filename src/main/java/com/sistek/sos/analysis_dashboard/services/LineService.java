@@ -16,8 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * Hat özetleri, hattan geçen barkodlar ve hat durum geçmişi.
- * Hem web ekranları hem REST API bu servisi kullanır.
+ * Hat özetleri, barkodlar ve hat loglarını yöneten iş mantığı servisi.
  */
 @Service
 @Transactional(readOnly = true)
@@ -36,16 +35,18 @@ public class LineService {
         this.lineLogRepository = lineLogRepository;
     }
 
+    /** Tüm hatların özet bilgilerini ve toplam barkod sayılarını döner. */
     public List<LineSummary> findAll() {
         return lineInfoRepository.findSummaries();
     }
 
+    /** Tek bir hattın özet bilgisini döner. */
     public LineSummary findById(String lineId) {
         return lineInfoRepository.findSummary(lineId)
                 .orElseThrow(() -> notFound(lineId));
     }
 
-    /** Tek bir hattın barkodları; hat yoksa 404. */
+    /** Belirli bir hatta ait barkodları filtreli ve sayfalı döner (Hat yoksa 404). */
     public Page<BarcodeRow> findLineBarcodes(String lineId, BarcodeFilter filter, PageQuery pageQuery) {
         requireExists(lineId);
         return findBarcodes(lineId, filter, pageQuery);
@@ -53,11 +54,11 @@ public class LineService {
 
     /** Genel barkod araması; lineId null ise tüm hatlarda arar. */
     public Page<BarcodeRow> findBarcodes(String lineId, BarcodeFilter filter, PageQuery pageQuery) {
-        // Sorgu native SQL olduğu için sıralama alanları tablo sütun adlarıdır
         return barcodeRepository.search(lineId, filter.barcodeQuery(), filter.status(), pageQuery.toPageable("cre_date", "barcode"))
                 .map(b -> new BarcodeRow(b.getBarcode(), b.getLineId(), b.getCreDate(), b.getStatus()));
     }
 
+    /** Hattın durum geçmiş loglarını sayfalı döner. */
     public Page<LogEntry> findLogs(String lineId, PageQuery pageQuery) {
         requireExists(lineId);
         return lineLogRepository.findByIdLineId(lineId, pageQuery.toPageable("procDate", "id.seqNo"))
@@ -74,3 +75,5 @@ public class LineService {
         return new ResourceNotFoundException("Hat bulunamadı: " + lineId);
     }
 }
+
+

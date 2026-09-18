@@ -10,10 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 
-/**
- * Hat ayrıntısı web denetleyicisi.
- * filter ve pageQuery sorgu parametrelerinden dolar ve şablona da aynı adla gider (bağlantılarda korunur).
- */
 @Controller
 public class LineController {
 
@@ -36,7 +32,6 @@ public class LineController {
         return "line";
     }
 
-    /** htmx'in periyodik olarak çektiği barkod tablosu: aynı filtre ve sayfayla, arama formu olmadan. */
     @GetMapping("/fragments/line/{lineId}")
     public String barcodeTableFragment(
             @PathVariable("lineId") String lineId,
@@ -52,3 +47,6 @@ public class LineController {
         model.addAttribute("barcodes", lineService.findLineBarcodes(lineId, filter, pageQuery));
     }
 }
+
+
+

@@ -13,7 +13,11 @@ import org.springframework.data.repository.query.Param;
  */
 public interface BarcodeRepository extends JpaRepository<BarcodeData, BarcodeId> {
 
-    // CAST(... AS text): PostgreSQL null parametrenin tipini bilemediği için gerekli
+    /**
+     * Dinamik barkod araması: Gönderilen parametreler null ise filtre uygulanmaz.
+     * CAST(... AS text): PostgreSQL'in null parametrelerde veri tipini belirleyebilmesi için gereklidir.
+     * ILIKE: Barkod metninde büyük/küçük harf duyarsız arama yapar.
+     */
     @Query(value = """
             SELECT b.barcode AS barcode, b.line_id AS lineId, b.cre_date AS creDate, b.status AS status
             FROM barcode_data b

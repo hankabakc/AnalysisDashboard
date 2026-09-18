@@ -54,3 +54,6 @@ public class PlcApiController {
         return PageResponse.from(plcService.findLogs(id, pageQuery));
     }
 }
+
+
+

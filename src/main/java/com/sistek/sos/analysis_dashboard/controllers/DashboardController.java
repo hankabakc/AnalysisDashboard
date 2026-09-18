@@ -40,3 +40,6 @@ public class DashboardController {
         model.addAttribute("lines", lineService.findAll());
     }
 }
+
+
+

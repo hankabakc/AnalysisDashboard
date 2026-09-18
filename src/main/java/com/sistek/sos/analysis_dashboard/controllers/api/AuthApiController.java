@@ -13,9 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * REST API JWT kimlik doğrulama denetleyicisi.
- */
 @Tag(name = "Kimlik Doğrulama", description = "JWT erişim belirteci alma uçları")
 @RestController
 @RequestMapping("/api/auth")
@@ -40,3 +37,6 @@ public class AuthApiController {
         return new LoginResponse(token, "Bearer", jwtService.getExpirationSeconds());
     }
 }
+
+
+

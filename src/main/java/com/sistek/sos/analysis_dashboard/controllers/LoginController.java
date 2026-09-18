@@ -3,9 +3,6 @@ package com.sistek.sos.analysis_dashboard.controllers;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
-/**
- * Kullanıcı giriş sayfası denetleyicisi.
- */
 @Controller
 public class LoginController {
 
@@ -14,3 +11,6 @@ public class LoginController {
         return "login";
     }
 }
+
+
+

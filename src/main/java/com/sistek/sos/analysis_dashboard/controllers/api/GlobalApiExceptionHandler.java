@@ -8,11 +8,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-/**
- * REST API için merkezi RFC 7807 ProblemDetail hata yönetimi.
- * Yalnızca API controller'larına uygulanır; web sayfalarının hataları templates/error.html ile HTML döner.
- * ResponseEntityExceptionHandler, Spring MVC'nin kendi hatalarını (ör. ?page=abc → 400) da ProblemDetail'e çevirir.
- */
 @RestControllerAdvice(basePackages = "com.sistek.sos.analysis_dashboard.controllers.api")
 public class GlobalApiExceptionHandler extends ResponseEntityExceptionHandler {
 
@@ -23,7 +18,6 @@ public class GlobalApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problemDetail;
     }
 
-    // Olmayan kullanıcı da buraya düşer: Spring, UsernameNotFoundException'ı BadCredentialsException'a çevirir
     @ExceptionHandler(BadCredentialsException.class)
     public ProblemDetail handleBadCredentials() {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
@@ -34,3 +28,6 @@ public class GlobalApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problemDetail;
     }
 }
+
+
+

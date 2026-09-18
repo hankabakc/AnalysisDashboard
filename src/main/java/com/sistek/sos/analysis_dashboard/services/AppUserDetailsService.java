@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Spring Security için veritabanı destekli kullanıcı detay servisi.
+ * Spring Security kimlik doğrulama için kullanıcı bilgilerini veritabanından yükler.
  */
 @Service
 @Transactional(readOnly = true)
@@ -27,7 +27,7 @@ public class AppUserDetailsService implements UserDetailsService {
         AppUser appUser = appUserRepository.findById(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı: " + username));
 
-        // roles(...) her role "ROLE_" önekini kendisi ekler
+        // Roller Spring Security formatına çevrilir (ROLE_ öneki otomatik eklenir)
         return User.withUsername(appUser.getUsername())
                 .password(appUser.getPassword())
                 .disabled(!appUser.isEnabled())
@@ -35,3 +35,5 @@ public class AppUserDetailsService implements UserDetailsService {
                 .build();
     }
 }
+
+
