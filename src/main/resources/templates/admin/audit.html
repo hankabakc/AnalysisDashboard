@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<head th:replace="~{fragments/layout :: head('Denetim Kaydı - Analysis Dashboard')}"></head>
+<body class="bg-light">
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid px-4 py-3">
+    <!-- Sayfa Başlığı -->
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <div>
+            <h1 class="h3 fw-bold mb-0">📋 Denetim Kaydı</h1>
+            <p class="text-muted small mb-0">Sistemdeki veri değişiklikleri ve oturum olaylarının geçmişi (Salt Okunur).</p>
+        </div>
+    </div>
+
+    <!-- Filtreleme Çubuğu: Kullanıcı adına göre arama -->
+    <div class="card shadow-sm border bg-white mb-4">
+        <div class="card-body p-3">
+            <form method="get" th:action="@{/admin/audit}" class="row g-2 align-items-center">
+                <input type="hidden" name="size" th:value="${pageQuery.size}" />
+                <div class="col-12 col-sm-6 col-md-4">
+                    <input type="text" name="query" class="form-control" placeholder="Kullanıcı adı ara (yapan veya etkilenen)…"
+                           aria-label="Kullanıcı adı ara" th:value="${query}" />
+                </div>
+                <div class="col-12 col-sm-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Ara</button>
+                    <a th:href="@{/admin/audit}" class="btn btn-outline-secondary">Temizle</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste Başlığı Bilgisi -->
+    <div class="d-flex justify-content-between align-items-baseline mb-2">
+        <p th:if="${logs.totalElements > 0}" class="text-muted mb-0"
+           th:text="${logs.totalElements} + ' kayıttan ' + ${logs.number * logs.size + 1} + '-' + ${logs.number * logs.size + logs.numberOfElements} + ' arası'">
+            10 kayıttan 1-10 arası
+        </p>
+        <p th:if="${logs.totalElements == 0}" class="text-muted mb-0">
+            0 kayıt bulundu
+        </p>
+    </div>
+
+    <!-- Boş Durum (WEB-04 §4.1) -->
+    <div th:if="${logs.totalElements == 0}" class="alert alert-info shadow-sm" role="status">
+        Denetim kaydı bulunamadı.
+    </div>
+
+    <!-- Denetim Tablosu ve Sayfalama -->
+    <div th:if="${logs.totalElements > 0}" class="card shadow-sm border bg-white mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col" class="py-3">ZAMAN</th>
+                    <th scope="col" class="py-3">OLAY</th>
+                    <th scope="col" class="py-3">KULLANICI (ACTOR)</th>
+                    <th scope="col" class="py-3">HEDEF (TARGET)</th>
+                    <th scope="col" class="py-3">ESKİ DEĞER</th>
+                    <th scope="col" class="py-3">YENİ DEĞER</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${logs.content}">
+                    <td class="font-monospace small" th:text="${row.occurredAt}">21.09.2026 14:00:00</td>
+                    <td>
+                        <span class="badge py-1 px-2" th:classappend="${row.eventBadgeClass}">
+                            <span th:text="${row.eventIcon}">🟢</span>
+                            <span th:text="${row.eventLabel}">Giriş Başarılı</span>
+                        </span>
+                    </td>
+                    <td class="font-monospace fw-semibold" th:text="${row.actor}">admin</td>
+                    <td class="font-monospace" th:text="${row.target}">user</td>
+                    <td class="font-monospace small text-muted text-break" th:text="${row.oldValue != null ? row.oldValue : '-'}">-</td>
+                    <td class="font-monospace small text-dark text-break" th:text="${row.newValue != null ? row.newValue : '-'}">-</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Sayfalayıcı Alt Çubuğu -->
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+            <div>
+                <a th:if="${logs.hasPrevious()}"
+                   th:href="@{/admin/audit(query=${query}, size=${pageQuery.size}, page=${logs.number - 1})}"
+                   class="btn btn-outline-primary btn-sm">
+                    ‹ Önceki
+                </a>
+                <button th:unless="${logs.hasPrevious()}"
+                        class="btn btn-outline-secondary btn-sm" disabled="disabled">
+                    ‹ Önceki
+                </button>
+            </div>
+            <div class="text-muted small">
+                <span th:text="'Sayfa ' + ${logs.number + 1} + ' / ' + ${logs.totalPages}">Sayfa 1 / 1</span>
+            </div>
+            <div>
+                <a th:if="${logs.hasNext()}"
+                   th:href="@{/admin/audit(query=${query}, size=${pageQuery.size}, page=${logs.number + 1})}"
+                   class="btn btn-outline-primary btn-sm">
+                    Sonraki ›
+                </a>
+                <button th:unless="${logs.hasNext()}"
+                        class="btn btn-outline-secondary btn-sm" disabled="disabled">
+                    Sonraki ›
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>

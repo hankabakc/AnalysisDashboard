@@ -1,16 +1,20 @@
 package com.sistek.sos.analysis_dashboard.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sistek.sos.analysis_dashboard.services.AuditService;
 import com.sistek.sos.analysis_dashboard.services.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.authentication.AuthenticationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -39,15 +43,22 @@ public class SecurityConfig {
 
     private final JwtService jwtService;
     private final ObjectMapper objectMapper;
+    private final AuditService auditService;
 
-    public SecurityConfig(JwtService jwtService, ObjectMapper objectMapper) {
+    public SecurityConfig(JwtService jwtService, ObjectMapper objectMapper, AuditService auditService) {
         this.jwtService = jwtService;
         this.objectMapper = objectMapper;
+        this.auditService = auditService;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationEventPublisher authenticationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+        return new DefaultAuthenticationEventPublisher(applicationEventPublisher);
     }
 
     @Bean
@@ -114,6 +125,12 @@ public class SecurityConfig {
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout")
+                .addLogoutHandler((request, response, authentication) -> {
+                    if (authentication != null && authentication.getName() != null
+                            && !"anonymousUser".equalsIgnoreCase(authentication.getName())) {
+                        auditService.record("LOGOUT", authentication.getName(), null, null, null);
+                    }
+                })
                 .permitAll()
             );
 

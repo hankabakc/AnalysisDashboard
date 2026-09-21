@@ -65,10 +65,12 @@ public class UserAdminController {
      */
     @PostMapping
     public String createUser(@ModelAttribute("form") UserForm form,
+                             Authentication authentication,
                              Model model,
                              RedirectAttributes redirectAttributes) {
         try {
-            userAdminService.createUser(form);
+            String actor = (authentication != null) ? authentication.getName() : "admin";
+            userAdminService.createUser(form, actor);
             redirectAttributes.addFlashAttribute("successMessage", "'" + form.username() + "' kullanıcısı başarıyla oluşturuldu.");
             return "redirect:/admin/users";
         } catch (UserValidationException e) {

@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 
 /**
  * Kullanıcı yönetimi servisi.
- * Tek yazma noktasıdır; listeleme, ekleme, güncelleme, silme ve tüm iş kuralları (kilitlenme koruması dahil) burada işletilir.
+ * Tek yazma noktasıdır; listeleme, ekleme, güncelleme, silme ve tüm iş kuralları (kilitlenme koruması ve denetim kaydı dahil) burada işletilir.
  */
 @Service
 @Transactional
@@ -36,10 +36,14 @@ public class UserAdminService {
 
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
-    public UserAdminService(AppUserRepository appUserRepository, PasswordEncoder passwordEncoder) {
+    public UserAdminService(AppUserRepository appUserRepository,
+                            PasswordEncoder passwordEncoder,
+                            AuditService auditService) {
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
+        this.auditService = auditService;
     }
 
     /**
@@ -52,7 +56,6 @@ public class UserAdminService {
                 .map(u -> new UserRow(u.getUsername(), u.getRoles(), u.isEnabled()));
     }
 
-
     /**
      * Düzenleme ekranı için kullanıcının mevcut bilgilerini DTO olarak döner (parola alanı boş döner).
      */
@@ -64,9 +67,9 @@ public class UserAdminService {
     }
 
     /**
-     * Yeni kullanıcı oluşturur.
+     * Yeni kullanıcı oluşturur ve aynı transaction içinde USER_CREATED denetim kaydı atar.
      */
-    public void createUser(UserForm form) {
+    public void createUser(UserForm form, String currentUsername) {
         Map<String, String> errors = new LinkedHashMap<>();
 
         // Kullanıcı adı kontrolü
@@ -97,10 +100,15 @@ public class UserAdminService {
         String passwordHash = passwordEncoder.encode(form.password());
         AppUser user = new AppUser(form.username(), passwordHash, form.enabled(), form.roles());
         appUserRepository.save(user);
+
+        // Denetim kaydı: USER_CREATED, target = yeni kullanıcı, new_value rolleri içerir, old_value boş
+        String actor = (currentUsername != null && !currentUsername.isBlank()) ? currentUsername : "system";
+        String newValue = "roles=" + form.roles() + ", enabled=" + form.enabled();
+        auditService.record("USER_CREATED", actor, form.username(), null, newValue);
     }
 
     /**
-     * Var olan kullanıcıyı günceller.
+     * Var olan kullanıcıyı günceller ve değişen alanlar için USER_UPDATED denetim kaydı atar.
      */
     public void updateUser(String username, UserForm form, String currentUsername) {
         AppUser user = appUserRepository.findById(username)
@@ -147,17 +155,60 @@ public class UserAdminService {
             }
         }
 
+        // Değişiklikleri tespit et (yalnızca değişen alanlar kaydedilir)
+        Set<String> oldRoles = user.getRoles();
+        boolean oldEnabled = user.isEnabled();
+        boolean passwordChanged = !form.password().isBlank();
+        boolean rolesChanged = !oldRoles.equals(form.roles());
+        boolean enabledChanged = (oldEnabled != form.enabled());
+
         // Değişiklikleri uygula
-        if (!form.password().isBlank()) {
+        if (passwordChanged) {
             user.setPassword(passwordEncoder.encode(form.password()));
         }
         user.setEnabled(form.enabled());
         user.setRoles(form.roles());
         appUserRepository.save(user);
+
+        // Denetim kaydı: USER_UPDATED (yalnızca değişen alanlar yazılır, parola maskelenir)
+        if (rolesChanged || enabledChanged || passwordChanged) {
+            StringBuilder oldVal = new StringBuilder();
+            StringBuilder newVal = new StringBuilder();
+
+            if (rolesChanged) {
+                oldVal.append("roles=").append(oldRoles);
+                newVal.append("roles=").append(form.roles());
+            }
+            if (enabledChanged) {
+                if (oldVal.length() > 0) {
+                    oldVal.append(", ");
+                }
+                if (newVal.length() > 0) {
+                    newVal.append(", ");
+                }
+                oldVal.append("enabled=").append(oldEnabled);
+                newVal.append("enabled=").append(form.enabled());
+            }
+            if (passwordChanged) {
+                if (newVal.length() > 0) {
+                    newVal.append(", ");
+                }
+                newVal.append("parola degisti");
+            }
+
+            String actor = (currentUsername != null && !currentUsername.isBlank()) ? currentUsername : "system";
+            auditService.record(
+                    "USER_UPDATED",
+                    actor,
+                    username,
+                    oldVal.length() > 0 ? oldVal.toString() : null,
+                    newVal.length() > 0 ? newVal.toString() : null
+            );
+        }
     }
 
     /**
-     * Kullanıcıyı siler.
+     * Kullanıcıyı siler ve USER_DELETED denetim kaydı atar.
      */
     public void deleteUser(String username, String currentUsername) {
         AppUser user = appUserRepository.findById(username)
@@ -176,7 +227,12 @@ public class UserAdminService {
             }
         }
 
+        String oldValue = "roles=" + user.getRoles() + ", enabled=" + user.isEnabled();
         appUserRepository.delete(user);
+
+        // Denetim kaydı: USER_DELETED, kullanıcı silinse de kayıt durur
+        String actor = (currentUsername != null && !currentUsername.isBlank()) ? currentUsername : "system";
+        auditService.record("USER_DELETED", actor, username, oldValue, null);
     }
 
     private void validateRoles(Set<String> roles, Map<String, String> errors) {
