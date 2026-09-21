@@ -61,6 +61,9 @@ class AuditControllerTest {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener sessionAuditListener;
+
     @Test
     @Order(1)
     @DisplayName("1. Yanlış parolayla giriş: tam 1 LOGIN_FAILURE satırı; actor = denenen kullanıcı adı; parola hiçbir alanda geçmez")
@@ -454,6 +457,184 @@ class AuditControllerTest {
         assertThat(totalPercent).isLessThan(totalAll);
     }
 
+    @Test
+    @Order(14)
+    @DisplayName("14. USER rolü GET /admin/users çağırır -> 403 Forbidden ve 1 ACCESS_DENIED (actor=user, target=/admin/users)")
+    void userAccessingAdminEndpoint_generatesAccessDeniedAuditLog() throws Exception {
+        long beforeCount = appAuditLogRepository.findAll().stream()
+                .filter(l -> "ACCESS_DENIED".equals(l.getEvent()) && "user".equals(l.getActor()))
+                .count();
+
+        mvc.perform(get("/admin/users").with(user("user").roles("USER")))
+                .andExpect(status().isForbidden());
+
+        List<AppAuditLog> logs = appAuditLogRepository.findAll().stream()
+                .filter(l -> "ACCESS_DENIED".equals(l.getEvent()) && "user".equals(l.getActor()))
+                .toList();
+
+        assertThat(logs).hasSize((int) beforeCount + 1);
+        AppAuditLog log = logs.get(logs.size() - 1);
+        assertThat(log.getActor()).isEqualTo("user");
+        assertThat(log.getTarget()).isEqualTo("/admin/users");
+        assertThat(log.getOldValue()).isNull();
+        assertThat(log.getNewValue()).isNull();
+    }
+
+    @Test
+    @Order(15)
+    @DisplayName("15. APIUSER rolü GET /dashboard çağırır -> 403 Forbidden ve 1 ACCESS_DENIED (actor=apiuser, target=/dashboard)")
+    void apiUserAccessingWebDashboard_generatesAccessDeniedAuditLog() throws Exception {
+        long beforeCount = appAuditLogRepository.findAll().stream()
+                .filter(l -> "ACCESS_DENIED".equals(l.getEvent()) && "apiuser".equals(l.getActor()))
+                .count();
+
+        mvc.perform(get("/dashboard").with(user("apiuser").roles("APIUSER")))
+                .andExpect(status().isForbidden());
+
+        List<AppAuditLog> logs = appAuditLogRepository.findAll().stream()
+                .filter(l -> "ACCESS_DENIED".equals(l.getEvent()) && "apiuser".equals(l.getActor()))
+                .toList();
+
+        assertThat(logs).hasSize((int) beforeCount + 1);
+        AppAuditLog log = logs.get(logs.size() - 1);
+        assertThat(log.getActor()).isEqualTo("apiuser");
+        assertThat(log.getTarget()).isEqualTo("/dashboard");
+        assertThat(log.getOldValue()).isNull();
+        assertThat(log.getNewValue()).isNull();
+    }
+
+    @Test
+    @Order(16)
+    @DisplayName("16. USER JWT token ile GET /api/lines -> 403 ProblemDetail ve 1 ACCESS_DENIED (actor=user, target=/api/lines)")
+    void userJwtAccessingRestApi_generatesAccessDeniedAuditLog() throws Exception {
+        long beforeCount = appAuditLogRepository.findAll().stream()
+                .filter(l -> "ACCESS_DENIED".equals(l.getEvent()) && "user".equals(l.getActor()))
+                .count();
+
+        String token = createJwtToken("user", List.of("ROLE_USER"));
+        mvc.perform(get("/api/lines")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.title").value("Erişim Reddedildi"));
+
+        List<AppAuditLog> logs = appAuditLogRepository.findAll().stream()
+                .filter(l -> "ACCESS_DENIED".equals(l.getEvent()) && "user".equals(l.getActor()))
+                .toList();
+
+        assertThat(logs).hasSize((int) beforeCount + 1);
+        AppAuditLog log = logs.get(logs.size() - 1);
+        assertThat(log.getActor()).isEqualTo("user");
+        assertThat(log.getTarget()).isEqualTo("/api/lines");
+        assertThat(log.getOldValue()).isNull();
+        assertThat(log.getNewValue()).isNull();
+    }
+
+    @Test
+    @Order(17)
+    @DisplayName("17. Anonim istekler (/dashboard, /fragments/dashboard, /line/1) 0 denetim kaydı üretir (tablo şişmesi önlenir)")
+    void anonymousRequests_produceZeroAuditLogs() throws Exception {
+        long beforeCount = appAuditLogRepository.count();
+
+        // 1. GET /dashboard -> 302 yönlendirme
+        mvc.perform(get("/dashboard")).andExpect(status().is3xxRedirection());
+
+        // 2. GET /fragments/dashboard (htmx header ile) -> 401
+        mvc.perform(get("/fragments/dashboard").header("HX-Request", "true")).andExpect(status().isUnauthorized());
+
+        // 3. GET /fragments/dashboard (normal) -> 302 yönlendirme
+        mvc.perform(get("/fragments/dashboard")).andExpect(status().is3xxRedirection());
+
+        // 4. GET /line/1 -> 302 yönlendirme
+        mvc.perform(get("/line/1")).andExpect(status().is3xxRedirection());
+
+        long afterCount = appAuditLogRepository.count();
+        assertThat(afterCount).isEqualTo(beforeCount);
+    }
+
+    @Test
+    @Order(18)
+    @DisplayName("18. POST /logout ile oturum kapatıldığında tam 1 LOGOUT oluşur, 0 SESSION_EXPIRED oluşur")
+    void logout_generatesOnlyLogout_notSessionExpired() throws Exception {
+        // Oturum aç
+        MvcResult loginResult = mvc.perform(post("/login")
+                        .with(csrf())
+                        .param("username", "user")
+                        .param("password", "user123"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession();
+        assertThat(session).isNotNull();
+
+        long beforeLogout = appAuditLogRepository.findAll().stream()
+                .filter(l -> "LOGOUT".equals(l.getEvent()) && "user".equals(l.getActor()))
+                .count();
+        long beforeExpired = appAuditLogRepository.findAll().stream()
+                .filter(l -> "SESSION_EXPIRED".equals(l.getEvent()) && "user".equals(l.getActor()))
+                .count();
+
+        // Çıkış yap
+        mvc.perform(post("/logout")
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().is3xxRedirection());
+
+        // LOGOUT_IN_PROGRESS_ATTR işaretli oturum kapandığında da SESSION_EXPIRED oluşmadığı doğrulanır
+        MockHttpSession mockLogoutSession = new MockHttpSession();
+        mockLogoutSession.setAttribute(com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener.LOGOUT_IN_PROGRESS_ATTR, Boolean.TRUE);
+        mockLogoutSession.setAttribute(com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener.AUTH_USER_ATTR, "user");
+        sessionAuditListener.sessionDestroyed(new jakarta.servlet.http.HttpSessionEvent(mockLogoutSession));
+
+        long afterLogout = appAuditLogRepository.findAll().stream()
+                .filter(l -> "LOGOUT".equals(l.getEvent()) && "user".equals(l.getActor()))
+                .count();
+        long afterExpired = appAuditLogRepository.findAll().stream()
+                .filter(l -> "SESSION_EXPIRED".equals(l.getEvent()) && "user".equals(l.getActor()))
+                .count();
+
+        assertThat(afterLogout).isEqualTo(beforeLogout + 1);
+        assertThat(afterExpired).isEqualTo(beforeExpired);
+    }
+
+    @Test
+    @Order(19)
+    @DisplayName("19. Oturum zaman aşımı / geçersiz kılınması -> 1 SESSION_EXPIRED (actor=username, target=null)")
+    void sessionTimeout_generatesSessionExpiredEvent() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener.AUTH_USER_ATTR, "zamanAsimiKullanici");
+
+        long beforeCount = appAuditLogRepository.findAll().stream()
+                .filter(l -> "SESSION_EXPIRED".equals(l.getEvent()) && "zamanAsimiKullanici".equals(l.getActor()))
+                .count();
+
+        sessionAuditListener.sessionDestroyed(new jakarta.servlet.http.HttpSessionEvent(session));
+
+        List<AppAuditLog> logs = appAuditLogRepository.findAll().stream()
+                .filter(l -> "SESSION_EXPIRED".equals(l.getEvent()) && "zamanAsimiKullanici".equals(l.getActor()))
+                .toList();
+
+        assertThat(logs).hasSize((int) beforeCount + 1);
+        AppAuditLog log = logs.get(logs.size() - 1);
+        assertThat(log.getActor()).isEqualTo("zamanAsimiKullanici");
+        assertThat(log.getTarget()).isNull();
+        assertThat(log.getOldValue()).isNull();
+        assertThat(log.getNewValue()).isNull();
+    }
+
+    @Test
+    @Order(20)
+    @DisplayName("20. GET /admin/audit: ACCESS_DENIED 'Yetkisiz Erişim ⛔' ve SESSION_EXPIRED 'Oturum Süresi Doldu ⏱️' olarak basılır")
+    void auditScreen_rendersTurkishLabelsAndIconsForNewEvents() throws Exception {
+        mvc.perform(get("/admin/audit").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Yetkisiz Erişim")))
+                .andExpect(content().string(containsString("⛔")))
+                .andExpect(content().string(containsString("Oturum Süresi Doldu")))
+                .andExpect(content().string(containsString("⏱️")));
+    }
+
     private String createJwtToken(String username, List<String> authorities) {
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 username,
@@ -463,3 +644,4 @@ class AuditControllerTest {
         return jwtService.generateToken(auth);
     }
 }
+

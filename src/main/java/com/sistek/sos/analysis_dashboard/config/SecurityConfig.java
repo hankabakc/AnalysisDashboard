@@ -1,10 +1,12 @@
 package com.sistek.sos.analysis_dashboard.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener;
 import com.sistek.sos.analysis_dashboard.services.AuditService;
 import com.sistek.sos.analysis_dashboard.services.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +22,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -85,9 +89,15 @@ public class SecurityConfig {
                 .authenticationEntryPoint((request, response, e) -> writeProblem(request, response,
                         HttpStatus.UNAUTHORIZED, "Yetkilendirme Gerekli",
                         "Bu uca erişmek için geçerli bir Bearer token gereklidir."))
-                .accessDeniedHandler((request, response, e) -> writeProblem(request, response,
-                        HttpStatus.FORBIDDEN, "Erişim Reddedildi",
-                        "Bu işlem için gerekli yetkiye sahip değilsiniz."))
+                .accessDeniedHandler((request, response, e) -> {
+                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                    if (auth != null && auth.isAuthenticated() && !"anonymousUser".equalsIgnoreCase(auth.getName())) {
+                        auditService.record("ACCESS_DENIED", auth.getName(), request.getRequestURI(), null, null);
+                    }
+                    writeProblem(request, response,
+                            HttpStatus.FORBIDDEN, "Erişim Reddedildi",
+                            "Bu işlem için gerekli yetkiye sahip değilsiniz.");
+                })
             );
 
         return http.build();
@@ -110,13 +120,23 @@ public class SecurityConfig {
             )
             // Oturum yoksa normal istek giriş sayfasına yönlenir. htmx tazeleme isteği (HX-Request) ise 401 alır;
             // yönlenseydi giriş sayfasının HTML'i veri alanının içine basılırdı. refresh.js 401'de sayfayı yeniler.
-            .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, e) -> {
-                if ("true".equals(request.getHeader("HX-Request"))) {
-                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                } else {
-                    loginPage.commence(request, response, e);
-                }
-            }))
+            // Yetkisiz erişimlerde ise ACCESS_DENIED denetim kaydı oluşturulur ve 403 döner (T-020).
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, e) -> {
+                    if ("true".equals(request.getHeader("HX-Request"))) {
+                        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                    } else {
+                        loginPage.commence(request, response, e);
+                    }
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                    if (auth != null && auth.isAuthenticated() && !"anonymousUser".equalsIgnoreCase(auth.getName())) {
+                        auditService.record("ACCESS_DENIED", auth.getName(), request.getRequestURI(), null, null);
+                    }
+                    response.sendError(HttpStatus.FORBIDDEN.value());
+                })
+            )
             .formLogin(form -> form
                 .loginPage("/login")
                 .defaultSuccessUrl("/dashboard", true)
@@ -126,6 +146,10 @@ public class SecurityConfig {
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout")
                 .addLogoutHandler((request, response, authentication) -> {
+                    HttpSession session = request.getSession(false);
+                    if (session != null) {
+                        session.setAttribute(SessionAuditListener.LOGOUT_IN_PROGRESS_ATTR, Boolean.TRUE);
+                    }
                     if (authentication != null && authentication.getName() != null
                             && !"anonymousUser".equalsIgnoreCase(authentication.getName())) {
                         auditService.record("LOGOUT", authentication.getName(), null, null, null);

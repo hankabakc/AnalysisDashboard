@@ -63,6 +63,16 @@ public record AuditRow(
                 icon = "🗑️";
                 badgeClass = "bg-danger";
             }
+            case "ACCESS_DENIED" -> {
+                label = "Yetkisiz Erişim";
+                icon = "⛔";
+                badgeClass = "bg-danger";
+            }
+            case "SESSION_EXPIRED" -> {
+                label = "Oturum Süresi Doldu";
+                icon = "⏱️";
+                badgeClass = "bg-secondary";
+            }
             default -> {
                 label = event;
                 icon = "ℹ️";
