@@ -7,11 +7,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * Denetim kaydı ekranı denetleyicisi (T-017).
+ * Denetim kaydı ekranı denetleyicisi (T-017, T-017-Eksik).
  * Yalnızca ADMIN yetkisine açıktır ve salt okunurdur.
  * Veri değiştiren veya dışa aktaran uç barındırmaz.
  */
@@ -30,13 +31,12 @@ public class AuditController {
      */
     @GetMapping
     public String auditLogPage(@RequestParam(name = "query", required = false) String query,
-                               PageQuery pageQuery,
+                               @ModelAttribute("pageQuery") PageQuery pageQuery,
                                Model model) {
         Page<AuditRow> logs = auditService.getAuditLogs(query, pageQuery);
 
         model.addAttribute("logs", logs);
         model.addAttribute("query", query != null ? query.trim() : "");
-        model.addAttribute("pageQuery", pageQuery);
 
         return "admin/audit";
     }

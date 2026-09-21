@@ -1,9 +1,11 @@
 package com.sistek.sos.analysis_dashboard.controllers;
 
 import com.sistek.sos.analysis_dashboard.TestcontainersConfig;
+import com.sistek.sos.analysis_dashboard.dto.AuditRow;
 import com.sistek.sos.analysis_dashboard.entities.AppAuditLog;
 import com.sistek.sos.analysis_dashboard.repositories.AppAuditLogRepository;
 import com.sistek.sos.analysis_dashboard.repositories.AppUserRepository;
+import com.sistek.sos.analysis_dashboard.services.JwtService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -13,26 +15,33 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.Comparator;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * T-017: Denetim Kaydı (Audit Log) ve Ekran Testleri.
- * Kabul kriterlerinin 8 maddesini test eder.
+ * T-017 / T-017-Eksik: Denetim Kaydı (Audit Log) ve Ekran Testleri.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -48,6 +57,9 @@ class AuditControllerTest {
 
     @Autowired
     private AppUserRepository appUserRepository;
+
+    @Autowired
+    private JwtService jwtService;
 
     @Test
     @Order(1)
@@ -75,7 +87,7 @@ class AuditControllerTest {
         assertThat(failureLog.getTarget()).isNull();
 
         // Parola metni kesinlikle hiçbir alanda geçmemeli
-        String allFields = failureLog.toString() + failureLog.getOldValue() + failureLog.getNewValue();
+        String allFields = String.valueOf(failureLog.getOldValue()) + failureLog.getNewValue();
         assertThat(allFields).doesNotContain("GizliParola999!");
     }
 
@@ -232,14 +244,19 @@ class AuditControllerTest {
 
     @Test
     @Order(7)
-    @WithMockUser(username = "user", roles = "USER")
     @DisplayName("7. /dashboard + /fragments/dashboard + /api/lines çağrıları -> app_audit_log satır sayısı değişmez")
     void readOnlyRequests_doNotGenerateAuditLogs() throws Exception {
         long countBefore = appAuditLogRepository.count();
 
-        mvc.perform(get("/dashboard")).andExpect(status().isOk());
-        mvc.perform(get("/fragments/dashboard")).andExpect(status().isOk());
-        mvc.perform(get("/line/1")).andExpect(status().isOk());
+        // 1. Web panosu oturumlu istekleri
+        mvc.perform(get("/dashboard").with(user("user").roles("USER"))).andExpect(status().isOk());
+        mvc.perform(get("/fragments/dashboard").with(user("user").roles("USER"))).andExpect(status().isOk());
+
+        // 2. Geçerli APIUSER Bearer token ile REST API isteği (200 OK)
+        String apiToken = createJwtToken("apiuser", List.of("ROLE_APIUSER"));
+        mvc.perform(get("/api/lines")
+                        .header("Authorization", "Bearer " + apiToken))
+                .andExpect(status().isOk());
 
         long countAfter = appAuditLogRepository.count();
         assertThat(countAfter).isEqualTo(countBefore);
@@ -255,26 +272,120 @@ class AuditControllerTest {
                 .andExpect(redirectedUrlPattern("**/login"));
 
         // USER rolü -> 403
-        mvc.perform(get("/admin/audit").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("normalUser").roles("USER")))
+        mvc.perform(get("/admin/audit").with(user("normalUser").roles("USER")))
                 .andExpect(status().isForbidden());
 
         // ADMIN rolü -> 200, sayfada Denetim Kaydı görünür
-        mvc.perform(get("/admin/audit").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN")))
+        MvcResult adminResult = mvc.perform(get("/admin/audit").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Denetim Kaydı")))
                 .andExpect(content().string(containsString("ZAMAN")))
-                .andExpect(content().string(containsString("OLAY")));
+                .andExpect(content().string(containsString("OLAY")))
+                .andReturn();
+
+        // Sıralama doğrulaması: Listenin ilk satırı veritabanındaki en yeni (en yüksek id'li) kayıt olmalı
+        Page<?> logsPage = (Page<?>) adminResult.getModelAndView().getModel().get("logs");
+        assertThat(logsPage).isNotEmpty();
+        AuditRow firstRow = (AuditRow) logsPage.getContent().get(0);
+
+        AppAuditLog newestLog = appAuditLogRepository.findAll().stream()
+                .max(Comparator.comparing(AppAuditLog::getId))
+                .orElseThrow();
+        assertThat(firstRow.id()).isEqualTo(newestLog.getId());
+
+        // HTML'de ilk satırın etiketi yer almalı
+        String htmlContent = adminResult.getResponse().getContentAsString();
+        assertThat(htmlContent).contains(firstRow.eventLabel());
 
         // ?size=9999 gönderilse bile tavan 200 olarak sınırlandırılır
         mvc.perform(get("/admin/audit")
-                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN"))
+                        .with(user("admin").roles("ADMIN"))
                         .param("size", "9999"))
                 .andExpect(status().isOk())
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().attributeExists("logs"))
+                .andExpect(model().attributeExists("logs"))
                 .andExpect(result -> {
-                    org.springframework.data.domain.Page<?> page =
-                            (org.springframework.data.domain.Page<?>) result.getModelAndView().getModel().get("logs");
+                    Page<?> page = (Page<?>) result.getModelAndView().getModel().get("logs");
                     assertThat(page.getSize()).isEqualTo(200);
                 });
+    }
+
+    @Test
+    @Order(9)
+    @DisplayName("9. Başarılı POST /api/auth/login -> tam 1 LOGIN_SUCCESS; gövdede parola geçmez")
+    void apiLoginSuccess_createsLoginSuccessEvent_withoutPassword() throws Exception {
+        long beforeCount = appAuditLogRepository.findAll().stream()
+                .filter(l -> "LOGIN_SUCCESS".equals(l.getEvent()) && "apiuser".equals(l.getActor()))
+                .count();
+
+        String payload = """
+                {
+                    "username": "apiuser",
+                    "password": "apiuser123"
+                }
+                """;
+
+        mvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.tokenType").value("Bearer"));
+
+        List<AppAuditLog> successLogs = appAuditLogRepository.findAll().stream()
+                .filter(l -> "LOGIN_SUCCESS".equals(l.getEvent()) && "apiuser".equals(l.getActor()))
+                .toList();
+
+        assertThat(successLogs).hasSize((int) beforeCount + 1);
+
+        AppAuditLog successLog = successLogs.get(successLogs.size() - 1);
+        assertThat(successLog.getActor()).isEqualTo("apiuser");
+        assertThat(successLog.getTarget()).isNull();
+
+        String allFields = String.valueOf(successLog.getOldValue()) + successLog.getNewValue();
+        assertThat(allFields).doesNotContain("apiuser123");
+    }
+
+    @Test
+    @Order(10)
+    @DisplayName("10. Yanlış parola ile POST /api/auth/login -> tam 1 LOGIN_FAILURE; actor = denenen kullanıcı adı; parola hiçbir alanda geçmez")
+    void apiLoginFailure_createsLoginFailureEvent_withoutPassword() throws Exception {
+        long beforeCount = appAuditLogRepository.findAll().stream()
+                .filter(l -> "LOGIN_FAILURE".equals(l.getEvent()) && "apiuser".equals(l.getActor()))
+                .count();
+
+        String payload = """
+                {
+                    "username": "apiuser",
+                    "password": "YanlisParola123!"
+                }
+                """;
+
+        mvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+
+        List<AppAuditLog> failureLogs = appAuditLogRepository.findAll().stream()
+                .filter(l -> "LOGIN_FAILURE".equals(l.getEvent()) && "apiuser".equals(l.getActor()))
+                .toList();
+
+        assertThat(failureLogs).hasSize((int) beforeCount + 1);
+
+        AppAuditLog failureLog = failureLogs.get(failureLogs.size() - 1);
+        assertThat(failureLog.getActor()).isEqualTo("apiuser");
+        assertThat(failureLog.getTarget()).isNull();
+
+        String allFields = String.valueOf(failureLog.getOldValue()) + failureLog.getNewValue();
+        assertThat(allFields).doesNotContain("YanlisParola123!");
+    }
+
+    private String createJwtToken(String username, List<String> authorities) {
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                username,
+                "n/a",
+                authorities.stream().map(SimpleGrantedAuthority::new).toList()
+        );
+        return jwtService.generateToken(auth);
     }
 }

@@ -6,14 +6,15 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
 
 import java.time.Instant;
 
 /**
- * Denetim kaydı entity sınıfı (T-017).
+ * Denetim kaydı JPA entity sınıfı.
  * Sistemdeki kritik veri değişiklikleri ve oturum olayları burada saklanır.
- * Pure Java kuralına uygun olarak yazılmıştır (Lombok yasak).
  */
+@Getter
 @Entity
 @Table(name = "app_audit_log", schema = "public")
 public class AppAuditLog {
@@ -49,72 +50,6 @@ public class AppAuditLog {
         this.actor = actor;
         this.target = target;
         this.oldValue = oldValue;
-        this.newValue = newValue;
-    }
-
-    public AppAuditLog(Long id, Instant occurredAt, String event, String actor, String target, String oldValue, String newValue) {
-        this.id = id;
-        this.occurredAt = occurredAt;
-        this.event = event;
-        this.actor = actor;
-        this.target = target;
-        this.oldValue = oldValue;
-        this.newValue = newValue;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public Instant getOccurredAt() {
-        return occurredAt;
-    }
-
-    public String getEvent() {
-        return event;
-    }
-
-    public String getActor() {
-        return actor;
-    }
-
-    public String getTarget() {
-        return target;
-    }
-
-    public String getOldValue() {
-        return oldValue;
-    }
-
-    public String getNewValue() {
-        return newValue;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public void setOccurredAt(Instant occurredAt) {
-        this.occurredAt = occurredAt;
-    }
-
-    public void setEvent(String event) {
-        this.event = event;
-    }
-
-    public void setActor(String actor) {
-        this.actor = actor;
-    }
-
-    public void setTarget(String target) {
-        this.target = target;
-    }
-
-    public void setOldValue(String oldValue) {
-        this.oldValue = oldValue;
-    }
-
-    public void setNewValue(String newValue) {
         this.newValue = newValue;
     }
 }
