@@ -28,7 +28,8 @@ public record PageQuery(
         return "asc".equals(sort) ? Sort.Direction.ASC : Sort.Direction.DESC;
     }
 
+    /** İkinci alan eşitlik durumunda sırayı belirler; yönü birinci alanla aynıdır. */
     public Pageable toPageable(String primaryProperty, String secondaryProperty) {
-        return PageRequest.of(page, size, Sort.by(direction(), primaryProperty).and(Sort.by(secondaryProperty)));
+        return PageRequest.of(page, size, Sort.by(direction(), primaryProperty, secondaryProperty));
     }
 }
