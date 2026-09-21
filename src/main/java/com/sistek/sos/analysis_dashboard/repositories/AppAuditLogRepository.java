@@ -13,6 +13,6 @@ public interface AppAuditLogRepository extends JpaRepository<AppAuditLog, Long> 
      * Kullanıcı adına göre (actor veya target) filtreli denetim kayıtlarını sayfalar.
      * En yeni kayıtlar en üstte yer alır.
      */
-    @Query("SELECT a FROM AppAuditLog a WHERE LOWER(a.actor) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(a.target) LIKE LOWER(CONCAT('%', :query, '%'))")
+    @Query("SELECT a FROM AppAuditLog a WHERE LOWER(a.actor) LIKE LOWER(CONCAT('%', :query, '%')) ESCAPE '!' OR LOWER(a.target) LIKE LOWER(CONCAT('%', :query, '%')) ESCAPE '!'")
     Page<AppAuditLog> searchLogs(@Param("query") String query, Pageable pageable);
 }

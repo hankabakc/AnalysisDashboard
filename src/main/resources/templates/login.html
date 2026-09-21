@@ -20,7 +20,7 @@
             <form th:action="@{/login}" method="post">
                 <div class="mb-3">
                     <label for="username" class="form-label fw-semibold">Kullanıcı Adı</label>
-                    <input type="text" id="username" name="username" class="form-control" placeholder="Kullanıcı adınızı giriniz" required autofocus />
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Kullanıcı adınızı giriniz" maxlength="50" required autofocus />
                 </div>
                 <div class="mb-4">
                     <label for="password" class="form-label fw-semibold">Parola</label>

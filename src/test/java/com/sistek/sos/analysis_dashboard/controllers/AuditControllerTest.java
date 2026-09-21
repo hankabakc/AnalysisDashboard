@@ -380,6 +380,80 @@ class AuditControllerTest {
         assertThat(allFields).doesNotContain("YanlisParola123!");
     }
 
+    @Test
+    @Order(11)
+    @DisplayName("11. 60 karakterlik kullanıcı adıyla POST /login -> 302 /login?error ve actor <= 50 karakterle 1 LOGIN_FAILURE")
+    void longUsernameLoginFailure_redirectsToLoginError_andTruncatesActor() throws Exception {
+        String longUsername = "a".repeat(60);
+        long beforeCount = appAuditLogRepository.findAll().stream()
+                .filter(l -> "LOGIN_FAILURE".equals(l.getEvent()))
+                .count();
+
+        mvc.perform(post("/login")
+                        .with(csrf())
+                        .param("username", longUsername)
+                        .param("password", "YanlisParola123!"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?error"));
+
+        List<AppAuditLog> failures = appAuditLogRepository.findAll().stream()
+                .filter(l -> "LOGIN_FAILURE".equals(l.getEvent()))
+                .toList();
+
+        assertThat(failures).hasSize((int) beforeCount + 1);
+        AppAuditLog lastFailure = failures.get(failures.size() - 1);
+        assertThat(lastFailure.getActor()).isNotNull();
+        assertThat(lastFailure.getActor().length()).isLessThanOrEqualTo(50);
+        assertThat(lastFailure.getActor()).isEqualTo("a".repeat(50));
+    }
+
+    @Test
+    @Order(12)
+    @DisplayName("12. 60 karakterlik kullanıcı adıyla POST /api/auth/login -> 401 Unauthorized + problem+json (500 değil)")
+    void longUsernameApiLoginFailure_returns401ProblemJson() throws Exception {
+        String longUsername = "b".repeat(60);
+        String payload = String.format("""
+                {
+                    "username": "%s",
+                    "password": "YanlisParola123!"
+                }
+                """, longUsername);
+
+        mvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+
+        List<AppAuditLog> failures = appAuditLogRepository.findAll().stream()
+                .filter(l -> "LOGIN_FAILURE".equals(l.getEvent()) && "b".repeat(50).equals(l.getActor()))
+                .toList();
+        assertThat(failures).hasSize(1);
+    }
+
+    @Test
+    @Order(13)
+    @DisplayName("13. Denetim kaydında admin ve apiuser varken ?query=% tüm kayıtları döndürmez")
+    void queryWithWildcardPercent_doesNotMatchAllRecords() throws Exception {
+        MvcResult allResult = mvc.perform(get("/admin/audit")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn();
+        Page<?> allPage = (Page<?>) allResult.getModelAndView().getModel().get("logs");
+        long totalAll = allPage.getTotalElements();
+        assertThat(totalAll).isGreaterThan(0);
+
+        MvcResult percentResult = mvc.perform(get("/admin/audit")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("query", "%"))
+                .andExpect(status().isOk())
+                .andReturn();
+        Page<?> percentPage = (Page<?>) percentResult.getModelAndView().getModel().get("logs");
+        long totalPercent = percentPage.getTotalElements();
+
+        assertThat(totalPercent).isLessThan(totalAll);
+    }
+
     private String createJwtToken(String username, List<String> authorities) {
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 username,

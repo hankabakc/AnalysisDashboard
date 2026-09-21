@@ -22,6 +22,8 @@ import java.time.Instant;
 @Transactional
 public class AuditService {
 
+    public static final int MAX_ACTOR_TARGET_LENGTH = 50;
+
     private final AppAuditLogRepository auditLogRepository;
 
     public AuditService(AppAuditLogRepository auditLogRepository) {
@@ -41,8 +43,8 @@ public class AuditService {
         AppAuditLog log = new AppAuditLog(
                 Instant.now(),
                 event,
-                actor,
-                target,
+                truncate(actor, MAX_ACTOR_TARGET_LENGTH),
+                truncate(target, MAX_ACTOR_TARGET_LENGTH),
                 oldValue,
                 newValue
         );
@@ -64,8 +66,25 @@ public class AuditService {
 
         Page<AppAuditLog> page = (trimmedQuery == null)
                 ? auditLogRepository.findAll(pageable)
-                : auditLogRepository.searchLogs(trimmedQuery, pageable);
+                : auditLogRepository.searchLogs(escapeLike(trimmedQuery), pageable);
 
         return page.map(AuditRow::from);
+    }
+
+    private static String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
+    }
+
+    private static String escapeLike(String input) {
+        if (input == null) {
+            return null;
+        }
+        return input
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
     }
 }
