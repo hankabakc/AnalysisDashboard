@@ -9,7 +9,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -111,18 +110,12 @@ public class UserAdminController {
     public String deleteUser(@PathVariable String username,
                              Authentication authentication,
                              RedirectAttributes redirectAttributes) {
-        userAdminService.deleteUser(username, authentication.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "'" + username + "' kullanıcısı başarıyla silindi.");
-        return "redirect:/admin/users";
-    }
-
-    /**
-     * Silme işleminde oluşan iş kuralı reddini flash mesaj olarak iletir.
-     */
-    @ExceptionHandler(UserValidationException.class)
-    public String handleValidationException(UserValidationException e, RedirectAttributes redirectAttributes) {
-        String message = e.getFieldErrors().getOrDefault("general", e.getMessage());
-        redirectAttributes.addFlashAttribute("errorMessage", message);
+        try {
+            userAdminService.deleteUser(username, authentication.getName());
+            redirectAttributes.addFlashAttribute("successMessage", "'" + username + "' kullanıcısı başarıyla silindi.");
+        } catch (UserValidationException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getFieldErrors().get("general"));
+        }
         return "redirect:/admin/users";
     }
 

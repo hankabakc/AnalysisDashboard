@@ -15,7 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +32,11 @@ import java.util.regex.Pattern;
 @Transactional
 public class UserAdminService {
 
-    public static final Set<String> ALLOWED_ROLES = Set.of("ADMIN", "USER", "APIUSER");
+    public static final Set<String> ALLOWED_ROLES = Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(
+            "ADMIN",
+            "USER",
+            "APIUSER"
+    )));
     public static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-z0-9._-]+$");
     public static final int MIN_PASSWORD_LENGTH = 12;
     public static final int MIN_USERNAME_LENGTH = 3;
@@ -229,12 +236,12 @@ public class UserAdminService {
         if (roles == null || roles.isEmpty()) {
             errors.put("roles", "En az bir rol seçilmelidir.");
         } else if (!ALLOWED_ROLES.containsAll(roles)) {
-            errors.put("roles", "Yalnızca " + formatAllowedRoles(ALLOWED_ROLES) + " rollerine izin verilir.");
+            errors.put("roles", "Yalnızca " + formatAllowedRoles() + " rollerine izin verilir.");
         }
     }
 
-    private static String formatAllowedRoles(Set<String> roles) {
-        List<String> list = List.of("ADMIN", "USER", "APIUSER");
+    private static String formatAllowedRoles() {
+        List<String> list = new ArrayList<>(ALLOWED_ROLES);
         return String.join(", ", list.subList(0, list.size() - 1)) + " ve " + list.get(list.size() - 1);
     }
 

@@ -30,6 +30,12 @@ public class AuditService {
 
     /**
      * Yeni bir denetim kaydı ekler.
+     *
+     * @param event    Olay türü (USER_CREATED, USER_UPDATED, USER_DELETED, LOGIN_SUCCESS, LOGIN_FAILURE, LOGOUT)
+     * @param actor    İşlemi gerçekleştiren kullanıcı (veya oturum denemesi yapılan kullanıcı adı)
+     * @param target   İşlemden etkilenen kullanıcı (varsa)
+     * @param oldValue Değişiklik öncesi durum / eski değer (yalnızca değişen alanlar)
+     * @param newValue Değişiklik sonrası durum / yeni değer (yalnızca değişen alanlar)
      */
     public void record(String event, String actor, String target, String oldValue, String newValue) {
         AppAuditLog log = new AppAuditLog(
