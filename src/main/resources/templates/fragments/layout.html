@@ -19,6 +19,7 @@
         </a>
         <div class="navbar-nav me-auto">
             <a class="nav-link active" th:href="@{/dashboard}">Üretim Panosu</a>
+            <a class="nav-link" th:href="@{/admin/users}" sec:authorize="hasRole('ADMIN')">Kullanıcılar</a>
         </div>
         <div class="d-flex align-items-center" sec:authorize="isAuthenticated()">
             <span class="text-light me-3">

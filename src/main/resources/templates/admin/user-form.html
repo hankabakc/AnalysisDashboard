@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<head th:replace="~{fragments/layout :: head(${isEdit} ? 'Kullanıcıyı Düzenle - Analysis Dashboard' : 'Yeni Kullanıcı Ekle - Analysis Dashboard')}"></head>
+<body class="bg-light">
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container py-4" style="max-width: 680px;">
+    <!-- Başlık ve Geri Dön Butonu -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h1 class="h3 fw-bold mb-0" th:text="${isEdit} ? '✏️ Kullanıcıyı Düzenle' : '➕ Yeni Kullanıcı Ekle'">
+                Kullanıcı Formu
+            </h1>
+            <p class="text-muted small mb-0"
+               th:text="${isEdit} ? 'Kullanıcı rollerini, parolasını ve durumunu güncelleyin.' : 'Sisteme yeni bir kullanıcı tanımlayın.'">
+                Açıklama
+            </p>
+        </div>
+        <a th:href="@{/admin/users}" class="btn btn-outline-secondary">
+            ‹ Kullanıcı Listesine Dön
+        </a>
+    </div>
+
+    <!-- Genel Hata Bildirimi (Kilitlenme Koruması / İş Kuralı) -->
+    <div th:if="${errors != null && errors.containsKey('general')}" class="alert alert-danger shadow-sm" role="alert">
+        <span aria-hidden="true">⚠️ </span>
+        <span th:text="${errors.general}">İş kuralı ihlali oluştu.</span>
+    </div>
+
+    <!-- Form Kartı -->
+    <div class="card shadow-sm border bg-white">
+        <div class="card-body p-4">
+            <form th:action="${isEdit} ? @{/admin/users/{username}(username=${form.username})} : @{/admin/users}"
+                  method="post">
+
+                <!-- Kullanıcı Adı -->
+                <div class="mb-3">
+                    <label for="username" class="form-label fw-semibold">Kullanıcı Adı</label>
+                    <input type="text"
+                           class="form-control font-monospace"
+                           th:classappend="${errors != null && errors.containsKey('username')} ? 'is-invalid' : ''"
+                           id="username"
+                           name="username"
+                           th:value="${form.username}"
+                           th:readonly="${isEdit}"
+                           placeholder="ornek.kullanici"
+                           required="required" />
+                    <div th:if="${errors != null && errors.containsKey('username')}" class="invalid-feedback d-block"
+                         th:text="${errors.username}">
+                        Geçersiz kullanıcı adı
+                    </div>
+                    <div class="form-text small" th:unless="${isEdit}">
+                        3–50 karakter uzunluğunda, yalnızca küçük harf, rakam, nokta, tire ve alt çizgi.
+                    </div>
+                </div>
+
+                <!-- Parola -->
+                <div class="mb-3">
+                    <label for="password" class="form-label fw-semibold">Parola</label>
+                    <input type="password"
+                           class="form-control font-monospace"
+                           th:classappend="${errors != null && errors.containsKey('password')} ? 'is-invalid' : ''"
+                           id="password"
+                           name="password"
+                           autocomplete="new-password" />
+                    <div th:if="${errors != null && errors.containsKey('password')}" class="invalid-feedback d-block"
+                         th:text="${errors.password}">
+                        Parola en az 12 karakter olmalıdır.
+                    </div>
+                    <div class="form-text small" th:if="${isEdit}">
+                        Parolayı değiştirmek istemiyorsanız boş bırakın. Değiştirecekseniz en az 12 karakter olmalıdır.
+                    </div>
+                    <div class="form-text small" th:unless="${isEdit}">
+                        En az 12 karakter uzunluğunda parola girilmelidir.
+                    </div>
+                </div>
+
+                <!-- Roller -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold d-block">Roller</label>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="roles" value="ADMIN" id="role-admin"
+                                   th:checked="${form.roles != null && form.roles.contains('ADMIN')}" />
+                            <label class="form-check-label" for="role-admin">
+                                <span class="badge bg-danger me-1">ADMIN</span> Yönetici
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="roles" value="USER" id="role-user"
+                                   th:checked="${form.roles != null && form.roles.contains('USER')}" />
+                            <label class="form-check-label" for="role-user">
+                                <span class="badge bg-primary me-1">USER</span> Web Kullanıcısı
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="roles" value="APIUSER" id="role-apiuser"
+                                   th:checked="${form.roles != null && form.roles.contains('APIUSER')}" />
+                            <label class="form-check-label" for="role-apiuser">
+                                <span class="badge bg-secondary me-1">APIUSER</span> REST API
+                            </label>
+                        </div>
+                    </div>
+                    <div th:if="${errors != null && errors.containsKey('roles')}" class="invalid-feedback d-block mt-1"
+                         th:text="${errors.roles}">
+                        En az bir rol seçilmelidir.
+                    </div>
+                </div>
+
+                <!-- Durum (Enabled) -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold d-block">Hesap Durumu</label>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="enabled" value="true" id="enabled"
+                               th:checked="${form.enabled}" />
+                        <input type="hidden" name="_enabled" value="on" />
+                        <label class="form-check-label" for="enabled">
+                            Hesap Etkin (Kullanıcı sisteme giriş yapabilir)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Form Butonları -->
+                <div class="d-flex gap-2 justify-content-end pt-3 border-top">
+                    <a th:href="@{/admin/users}" class="btn btn-outline-secondary">
+                        İptal
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <span th:text="${isEdit} ? '💾 Değişiklikleri Kaydet' : '➕ Kullanıcıyı Oluştur'">Kaydet</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+</body>
+</html>

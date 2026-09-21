@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<head th:replace="~{fragments/layout :: head('Kullanıcı Yönetimi - Analysis Dashboard')}"></head>
+<body class="bg-light">
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<main class="container-fluid px-4 py-3">
+    <!-- Sayfa Başlığı ve Yeni Kullanıcı Butonu -->
+    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <div>
+            <h1 class="h3 fw-bold mb-0">👥 Kullanıcı Yönetimi</h1>
+            <p class="text-muted small mb-0">Sistem kullanıcılarını, yetkilerini ve durumlarını yönetin.</p>
+        </div>
+        <div>
+            <a th:href="@{/admin/users/new}" class="btn btn-primary">
+                ➕ Yeni Kullanıcı Ekle
+            </a>
+        </div>
+    </div>
+
+    <!-- Başarı Bildirimi -->
+    <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <span aria-hidden="true">✅ </span>
+        <span th:text="${successMessage}">İşlem başarılı.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
+    </div>
+
+    <!-- Hata Bildirimi -->
+    <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <span aria-hidden="true">⚠️ </span>
+        <span th:text="${errorMessage}">İşlem gerçekleştirilemedi.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
+    </div>
+
+    <!-- Liste Başlığı Bilgisi -->
+    <div class="d-flex justify-content-between align-items-baseline mb-2">
+        <p th:if="${users.totalElements > 0}" class="text-muted mb-0"
+           th:text="${users.totalElements} + ' kullanıcıdan ' + ${users.number * users.size + 1} + '-' + ${users.number * users.size + users.numberOfElements} + ' arası'">
+            3 kullanıcıdan 1-3 arası
+        </p>
+        <p th:if="${users.totalElements == 0}" class="text-muted mb-0">
+            0 kullanıcı bulundu
+        </p>
+    </div>
+
+    <!-- Boş Durum (WEB-04 §4.1) -->
+    <div th:if="${users.totalElements == 0}" class="alert alert-info shadow-sm" role="status">
+        Sistemde kayıtlı kullanıcı bulunamadı.
+    </div>
+
+    <!-- Kullanıcılar Tablosu ve Sayfalama -->
+    <div th:if="${users.totalElements > 0}" class="card shadow-sm border bg-white mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col" class="py-3">KULLANICI ADI</th>
+                    <th scope="col" class="py-3">ROLLER</th>
+                    <th scope="col" class="py-3">DURUM</th>
+                    <th scope="col" class="py-3 text-end">İŞLEMLER</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="u : ${users.content}">
+                    <td class="font-monospace fw-semibold" th:text="${u.username}">admin</td>
+                    <td>
+                        <span th:each="role : ${u.roles}" class="badge bg-secondary me-1 py-1 px-2"
+                              th:text="${role}">ADMIN</span>
+                    </td>
+                    <td>
+                        <span th:if="${u.enabled}" class="badge bg-success py-1 px-2">● Aktif</span>
+                        <span th:unless="${u.enabled}" class="badge bg-secondary py-1 px-2">▲ Pasif</span>
+                    </td>
+                    <td class="text-end">
+                        <a th:href="@{/admin/users/{username}/edit(username=${u.username})}"
+                           class="btn btn-outline-primary btn-sm me-1">
+                            ✏️ Düzenle
+                        </a>
+                        <form th:action="@{/admin/users/{username}/delete(username=${u.username})}"
+                              method="post" class="d-inline"
+                              onsubmit="return confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?');">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                🗑️ Sil
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Sayfalayıcı Alt Çubuğu -->
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+            <div>
+                <a th:if="${users.hasPrevious()}"
+                   th:href="@{/admin/users(size=${pageQuery.size}, sort=${pageQuery.sort}, page=${users.number - 1})}"
+                   class="btn btn-outline-primary btn-sm">
+                    ‹ Önceki
+                </a>
+                <button th:unless="${users.hasPrevious()}"
+                        class="btn btn-outline-secondary btn-sm" disabled="disabled">
+                    ‹ Önceki
+                </button>
+            </div>
+            <div class="text-muted small">
+                <span th:text="'Sayfa ' + ${users.number + 1} + ' / ' + ${users.totalPages}">Sayfa 1 / 1</span>
+            </div>
+            <div>
+                <a th:if="${users.hasNext()}"
+                   th:href="@{/admin/users(size=${pageQuery.size}, sort=${pageQuery.sort}, page=${users.number + 1})}"
+                   class="btn btn-outline-primary btn-sm">
+                    Sonraki ›
+                </a>
+                <button th:unless="${users.hasNext()}"
+                        class="btn btn-outline-secondary btn-sm" disabled="disabled">
+                    Sonraki ›
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>
