@@ -295,4 +295,77 @@ class UserAdminControllerTest {
                 .andExpect(content().string(containsString("Kullanıcıyı Düzenle")))
                 .andExpect(content().string(containsString("value=\"admin\"")));
     }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    @DisplayName("12. admin, user hesabını pasifleştirir: 302; DB'de enabled=false, listede '▲ Pasif' görünür, kullanıcı giriş yapamaz")
+    void adminCanDisableUser() throws Exception {
+        // user hesabını pasifleştir (checkbox işaretsiz: _enabled=on)
+        mvc.perform(post("/admin/users/user")
+                        .with(csrf())
+                        .param("username", "user")
+                        .param("password", "")
+                        .param("roles", "USER")
+                        .param("_enabled", "on"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users"));
+
+        AppUser disabledUser = appUserRepository.findById("user").orElseThrow();
+        assertThat(disabledUser.isEnabled()).isFalse();
+
+        // Listede ▲ Pasif göründüğünü doğrula
+        mvc.perform(get("/admin/users"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("▲ Pasif")));
+
+        // Pasifleştirilen kullanıcı giriş yapamaz (DisabledException -> 302 /login?error)
+        mvc.perform(post("/login")
+                        .with(csrf())
+                        .param("username", "user")
+                        .param("password", "user123"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?error"));
+
+
+        // Temizlik: user'ı tekrar aktif yapalım ki diğer testleri etkilemesin
+        disabledUser.setEnabled(true);
+        appUserRepository.save(disabledUser);
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    @DisplayName("13. admin kendi hesabını pasifleştiremez: 200 döner, hata mesajı basılır, DB değişmez")
+    void adminCannotDisableSelf() throws Exception {
+        mvc.perform(post("/admin/users/admin")
+                        .with(csrf())
+                        .param("username", "admin")
+                        .param("password", "")
+                        .param("roles", "ADMIN")
+                        .param("enabled", "false"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Kendi hesabınızı pasifleştiremezsiniz.")));
+
+        AppUser adminUser = appUserRepository.findById("admin").orElseThrow();
+        assertThat(adminUser.isEnabled()).isTrue();
+    }
+
+    @Test
+    @WithMockUser(username = "admin2", roles = "ADMIN")
+    @DisplayName("14. Sistemdeki son etkin ADMIN pasifleştirilemez: reddedilir, DB değişmez")
+    void cannotDisableLastActiveAdmin() throws Exception {
+        // Sistemde tek etkin ADMIN 'admin' var.
+        // admin2 mock kullanıcısı 'admin'i pasifleştirmeye çalışır:
+        mvc.perform(post("/admin/users/admin")
+                        .with(csrf())
+                        .param("username", "admin")
+                        .param("password", "")
+                        .param("roles", "ADMIN")
+                        .param("enabled", "false"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sistemdeki son etkin yönetici pasifleştirilemez.")));
+
+        AppUser adminUser = appUserRepository.findById("admin").orElseThrow();
+        assertThat(adminUser.isEnabled()).isTrue();
+    }
 }
+

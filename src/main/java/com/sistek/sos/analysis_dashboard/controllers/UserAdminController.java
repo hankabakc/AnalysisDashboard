@@ -35,6 +35,14 @@ public class UserAdminController {
     }
 
     /**
+     * Tüm form görünümleri için izin verilen rolleri modele otomatik sağlar.
+     */
+    @ModelAttribute("availableRoles")
+    public Set<String> availableRoles() {
+        return UserAdminService.ALLOWED_ROLES;
+    }
+
+    /**
      * Kullanıcıları listeler (sayfalanmış).
      */
     @GetMapping
@@ -49,10 +57,7 @@ public class UserAdminController {
      */
     @GetMapping("/new")
     public String newUserForm(Model model) {
-        model.addAttribute("form", new UserForm("", "", Set.of("USER"), true));
-        model.addAttribute("isEdit", false);
-        model.addAttribute("availableRoles", UserAdminService.ALLOWED_ROLES);
-        return "admin/user-form";
+        return renderForm(model, new UserForm("", "", Set.of("USER"), true), null, false);
     }
 
     /**
@@ -67,11 +72,7 @@ public class UserAdminController {
             redirectAttributes.addFlashAttribute("successMessage", "'" + form.username() + "' kullanıcısı başarıyla oluşturuldu.");
             return "redirect:/admin/users";
         } catch (UserValidationException e) {
-            model.addAttribute("form", form);
-            model.addAttribute("errors", e.getFieldErrors());
-            model.addAttribute("isEdit", false);
-            model.addAttribute("availableRoles", UserAdminService.ALLOWED_ROLES);
-            return "admin/user-form";
+            return renderForm(model, form, e.getFieldErrors(), false);
         }
     }
 
@@ -80,11 +81,7 @@ public class UserAdminController {
      */
     @GetMapping("/{username}/edit")
     public String editUserForm(@PathVariable String username, Model model) {
-        UserForm form = userAdminService.getUserForEdit(username);
-        model.addAttribute("form", form);
-        model.addAttribute("isEdit", true);
-        model.addAttribute("availableRoles", UserAdminService.ALLOWED_ROLES);
-        return "admin/user-form";
+        return renderForm(model, userAdminService.getUserForEdit(username), null, true);
     }
 
     /**
@@ -101,17 +98,9 @@ public class UserAdminController {
             redirectAttributes.addFlashAttribute("successMessage", "'" + username + "' kullanıcısı başarıyla güncellendi.");
             return "redirect:/admin/users";
         } catch (UserValidationException e) {
-            model.addAttribute("form", form);
-            model.addAttribute("errors", e.getFieldErrors());
-            model.addAttribute("isEdit", true);
-            model.addAttribute("availableRoles", UserAdminService.ALLOWED_ROLES);
-            return "admin/user-form";
+            return renderForm(model, form, e.getFieldErrors(), true);
         } catch (UserBusinessException e) {
-            model.addAttribute("form", form);
-            model.addAttribute("errors", Map.of("general", e.getMessage()));
-            model.addAttribute("isEdit", true);
-            model.addAttribute("availableRoles", UserAdminService.ALLOWED_ROLES);
-            return "admin/user-form";
+            return renderForm(model, form, Map.of("general", e.getMessage()), true);
         }
     }
 
@@ -129,5 +118,12 @@ public class UserAdminController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/users";
+    }
+
+    private String renderForm(Model model, UserForm form, Map<String, String> errors, boolean isEdit) {
+        model.addAttribute("form", form);
+        model.addAttribute("errors", errors);
+        model.addAttribute("isEdit", isEdit);
+        return "admin/user-form";
     }
 }

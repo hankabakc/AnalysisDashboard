@@ -48,9 +48,10 @@ public class UserAdminService {
     @Transactional(readOnly = true)
     public Page<UserRow> getUsers(PageQuery pageQuery) {
         PageRequest pageable = PageRequest.of(pageQuery.page(), pageQuery.size(), Sort.by(Sort.Direction.ASC, "username"));
-        return appUserRepository.findAllByOrderByUsernameAsc(pageable)
+        return appUserRepository.findAll(pageable)
                 .map(u -> new UserRow(u.getUsername(), u.getRoles(), u.isEnabled()));
     }
+
 
     /**
      * Düzenleme ekranı için kullanıcının mevcut bilgilerini DTO olarak döner (parola alanı boş döner).
