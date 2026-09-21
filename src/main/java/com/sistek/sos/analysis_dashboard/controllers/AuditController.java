@@ -36,7 +36,7 @@ public class AuditController {
         Page<AuditRow> logs = auditService.getAuditLogs(query, pageQuery);
 
         model.addAttribute("logs", logs);
-        model.addAttribute("query", query != null ? query.trim() : "");
+        model.addAttribute("query", query != null ? query : "");
 
         return "admin/audit";
     }

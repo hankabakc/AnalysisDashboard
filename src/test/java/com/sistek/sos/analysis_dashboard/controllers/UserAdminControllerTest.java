@@ -367,5 +367,42 @@ class UserAdminControllerTest {
         AppUser adminUser = appUserRepository.findById("admin").orElseThrow();
         assertThat(adminUser.isEnabled()).isTrue();
     }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    @DisplayName("15. Başında ve sonunda boşluk bulunan parolayla oluşturma: parola kırpılmaz, boşluklu parolayla form login başarılı olur")
+    void passwordWithLeadingAndTrailingSpacesPreserved() throws Exception {
+        String testUser = "bosluklu.parola";
+        String passwordWithSpaces = "  GizliParola123!  "; // başında ve sonunda boşluk olan 19 karakter
+        appUserRepository.deleteById(testUser);
+
+        // 1. Kullanıcıyı oluştur
+        mvc.perform(post("/admin/users")
+                        .with(csrf())
+                        .param("username", testUser)
+                        .param("password", passwordWithSpaces)
+                        .param("roles", "USER")
+                        .param("enabled", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users"));
+
+        assertThat(appUserRepository.existsById(testUser)).isTrue();
+
+        // 2. Kırpılmış parolayla giriş başarısız olmalı (parola kırpılmadığı için eşleşmez)
+        mvc.perform(post("/login")
+                        .with(csrf())
+                        .param("username", testUser)
+                        .param("password", passwordWithSpaces.trim()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?error"));
+
+        // 3. Tam olarak girilen (başında ve sonunda boşluk olan) parolayla giriş başarılı olmalı
+        mvc.perform(post("/login")
+                        .with(csrf())
+                        .param("username", testUser)
+                        .param("password", passwordWithSpaces))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard"));
+    }
 }
 

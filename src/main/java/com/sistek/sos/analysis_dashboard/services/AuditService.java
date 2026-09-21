@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 
 /**
- * Denetim kaydı servisi (T-017).
+ * Denetim kaydı servisi (T-017, T-018).
  * Denetim kaydı yazımı için TEK YAZMA NOKTASIDIR.
  * Kayıtlar başka hiçbir sınıftan doğrudan veritabanına yazılamaz.
  * Zaman damgası daima UTC saklanır (ENG-03 §1.3).
@@ -30,12 +30,6 @@ public class AuditService {
 
     /**
      * Yeni bir denetim kaydı ekler.
-     *
-     * @param event    Olay türü (USER_CREATED, USER_UPDATED, USER_DELETED, LOGIN_SUCCESS, LOGIN_FAILURE, LOGOUT)
-     * @param actor    İşlemi gerçekleştiren kullanıcı (veya oturum denemesi yapılan kullanıcı adı)
-     * @param target   İşlemden etkilenen kullanıcı (varsa)
-     * @param oldValue Değişiklik öncesi durum / eski değer (yalnızca değişen alanlar)
-     * @param newValue Değişiklik sonrası durum / yeni değer (yalnızca değişen alanlar)
      */
     public void record(String event, String actor, String target, String oldValue, String newValue) {
         AppAuditLog log = new AppAuditLog(
@@ -59,10 +53,13 @@ public class AuditService {
         PageRequest pageable = PageRequest.of(
                 pageQuery.page(),
                 pageQuery.size(),
-                Sort.by(Sort.Direction.DESC, "occurredAt").and(Sort.by(Sort.Direction.DESC, "id"))
+                Sort.by(Sort.Direction.DESC, "occurredAt", "id")
         );
 
-        return auditLogRepository.searchLogs(trimmedQuery, pageable)
-                .map(AuditRow::from);
+        Page<AppAuditLog> page = (trimmedQuery == null)
+                ? auditLogRepository.findAll(pageable)
+                : auditLogRepository.searchLogs(trimmedQuery, pageable);
+
+        return page.map(AuditRow::from);
     }
 }

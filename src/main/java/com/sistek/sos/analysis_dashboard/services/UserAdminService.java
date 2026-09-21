@@ -5,7 +5,6 @@ import com.sistek.sos.analysis_dashboard.dto.UserForm;
 import com.sistek.sos.analysis_dashboard.dto.UserRow;
 import com.sistek.sos.analysis_dashboard.entities.AppUser;
 import com.sistek.sos.analysis_dashboard.exceptions.ResourceNotFoundException;
-import com.sistek.sos.analysis_dashboard.exceptions.UserBusinessException;
 import com.sistek.sos.analysis_dashboard.exceptions.UserValidationException;
 import com.sistek.sos.analysis_dashboard.repositories.AppUserRepository;
 import org.springframework.data.domain.Page;
@@ -15,7 +14,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -76,19 +77,15 @@ public class UserAdminService {
         if (form.username().isBlank()) {
             errors.put("username", "Kullanıcı adı zorunludur.");
         } else if (form.username().length() < MIN_USERNAME_LENGTH || form.username().length() > MAX_USERNAME_LENGTH) {
-            errors.put("username", "Kullanıcı adı 3 ile 50 karakter arasında olmalıdır.");
+            errors.put("username", "Kullanıcı adı " + MIN_USERNAME_LENGTH + " ile " + MAX_USERNAME_LENGTH + " karakter arasında olmalıdır.");
         } else if (!USERNAME_PATTERN.matcher(form.username()).matches()) {
             errors.put("username", "Kullanıcı adı yalnızca küçük harf (a-z), rakam (0-9), nokta (.), alt çizgi (_) ve tire (-) içerebilir.");
         } else if (appUserRepository.existsById(form.username())) {
             errors.put("username", "Bu kullanıcı adı zaten kullanılıyor.");
         }
 
-        // Parola kontrolü: oluşturmada zorunlu ve en az 12 karakter
-        if (form.password().isBlank()) {
-            errors.put("password", "Parola zorunludur.");
-        } else if (form.password().length() < MIN_PASSWORD_LENGTH) {
-            errors.put("password", "Parola en az 12 karakter olmalıdır.");
-        }
+        // Parola kontrolü: oluşturmada zorunlu ve asgari uzunlukta olmalı
+        validatePassword(form.password(), true, errors);
 
         // Rol kontrolü: en az bir rol ve yalnızca izin verilen roller
         validateRoles(form.roles(), errors);
@@ -102,9 +99,8 @@ public class UserAdminService {
         appUserRepository.save(user);
 
         // Denetim kaydı: USER_CREATED, target = yeni kullanıcı, new_value rolleri içerir, old_value boş
-        String actor = (currentUsername != null && !currentUsername.isBlank()) ? currentUsername : "system";
         String newValue = "roles=" + form.roles() + ", enabled=" + form.enabled();
-        auditService.record("USER_CREATED", actor, form.username(), null, newValue);
+        auditService.record("USER_CREATED", resolveActor(currentUsername), form.username(), null, newValue);
     }
 
     /**
@@ -116,10 +112,8 @@ public class UserAdminService {
 
         Map<String, String> errors = new LinkedHashMap<>();
 
-        // Parola kontrolü: güncellemede boş bırakılabilir; doluysa en az 12 karakter olmalıdır
-        if (!form.password().isBlank() && form.password().length() < MIN_PASSWORD_LENGTH) {
-            errors.put("password", "Parola en az 12 karakter olmalıdır.");
-        }
+        // Parola kontrolü: güncellemede boş bırakılabilir; doluysa asgari uzunlukta olmalıdır
+        validatePassword(form.password(), false, errors);
 
         // Rol kontrolü
         validateRoles(form.roles(), errors);
@@ -132,10 +126,10 @@ public class UserAdminService {
         // 1. Kendi hesabı mı?
         if (username.equals(currentUsername)) {
             if (!form.enabled()) {
-                throw new UserBusinessException("Kendi hesabınızı pasifleştiremezsiniz.");
+                throw new UserValidationException("Kendi hesabınızı pasifleştiremezsiniz.");
             }
             if (!form.roles().contains("ADMIN")) {
-                throw new UserBusinessException("Kendi ADMIN rolünüzü kaldıramazsınız.");
+                throw new UserValidationException("Kendi ADMIN rolünüzü kaldıramazsınız.");
             }
         }
 
@@ -147,9 +141,9 @@ public class UserAdminService {
                 long activeAdminCount = appUserRepository.countActiveAdmins();
                 if (activeAdminCount <= 1) {
                     if (!form.enabled()) {
-                        throw new UserBusinessException("Sistemdeki son etkin yönetici pasifleştirilemez.");
+                        throw new UserValidationException("Sistemdeki son etkin yönetici pasifleştirilemez.");
                     } else {
-                        throw new UserBusinessException("Sistemdeki son etkin yöneticinin ADMIN rolü kaldırılamaz.");
+                        throw new UserValidationException("Sistemdeki son etkin yöneticinin ADMIN rolü kaldırılamaz.");
                     }
                 }
             }
@@ -172,38 +166,25 @@ public class UserAdminService {
 
         // Denetim kaydı: USER_UPDATED (yalnızca değişen alanlar yazılır, parola maskelenir)
         if (rolesChanged || enabledChanged || passwordChanged) {
-            StringBuilder oldVal = new StringBuilder();
-            StringBuilder newVal = new StringBuilder();
+            List<String> oldChanges = new ArrayList<>();
+            List<String> newChanges = new ArrayList<>();
 
             if (rolesChanged) {
-                oldVal.append("roles=").append(oldRoles);
-                newVal.append("roles=").append(form.roles());
+                oldChanges.add("roles=" + oldRoles);
+                newChanges.add("roles=" + form.roles());
             }
             if (enabledChanged) {
-                if (oldVal.length() > 0) {
-                    oldVal.append(", ");
-                }
-                if (newVal.length() > 0) {
-                    newVal.append(", ");
-                }
-                oldVal.append("enabled=").append(oldEnabled);
-                newVal.append("enabled=").append(form.enabled());
+                oldChanges.add("enabled=" + oldEnabled);
+                newChanges.add("enabled=" + form.enabled());
             }
             if (passwordChanged) {
-                if (newVal.length() > 0) {
-                    newVal.append(", ");
-                }
-                newVal.append("parola degisti");
+                newChanges.add("parola degisti");
             }
 
-            String actor = (currentUsername != null && !currentUsername.isBlank()) ? currentUsername : "system";
-            auditService.record(
-                    "USER_UPDATED",
-                    actor,
-                    username,
-                    oldVal.length() > 0 ? oldVal.toString() : null,
-                    newVal.length() > 0 ? newVal.toString() : null
-            );
+            String oldValue = oldChanges.isEmpty() ? null : String.join(", ", oldChanges);
+            String newValue = newChanges.isEmpty() ? null : String.join(", ", newChanges);
+
+            auditService.record("USER_UPDATED", resolveActor(currentUsername), username, oldValue, newValue);
         }
     }
 
@@ -216,14 +197,14 @@ public class UserAdminService {
 
         // Kilitlenme koruması
         if (username.equals(currentUsername)) {
-            throw new UserBusinessException("Kendi hesabınızı silemezsiniz.");
+            throw new UserValidationException("Kendi hesabınızı silemezsiniz.");
         }
 
         boolean isTargetActiveAdmin = user.isEnabled() && user.getRoles().contains("ADMIN");
         if (isTargetActiveAdmin) {
             long activeAdminCount = appUserRepository.countActiveAdmins();
             if (activeAdminCount <= 1) {
-                throw new UserBusinessException("Sistemdeki son etkin yönetici silinemez.");
+                throw new UserValidationException("Sistemdeki son etkin yönetici silinemez.");
             }
         }
 
@@ -231,15 +212,33 @@ public class UserAdminService {
         appUserRepository.delete(user);
 
         // Denetim kaydı: USER_DELETED, kullanıcı silinse de kayıt durur
-        String actor = (currentUsername != null && !currentUsername.isBlank()) ? currentUsername : "system";
-        auditService.record("USER_DELETED", actor, username, oldValue, null);
+        auditService.record("USER_DELETED", resolveActor(currentUsername), username, oldValue, null);
+    }
+
+    private void validatePassword(String password, boolean required, Map<String, String> errors) {
+        if (password.isBlank()) {
+            if (required) {
+                errors.put("password", "Parola zorunludur.");
+            }
+        } else if (password.length() < MIN_PASSWORD_LENGTH) {
+            errors.put("password", "Parola en az " + MIN_PASSWORD_LENGTH + " karakter olmalıdır.");
+        }
     }
 
     private void validateRoles(Set<String> roles, Map<String, String> errors) {
         if (roles == null || roles.isEmpty()) {
             errors.put("roles", "En az bir rol seçilmelidir.");
         } else if (!ALLOWED_ROLES.containsAll(roles)) {
-            errors.put("roles", "Yalnızca ADMIN, USER ve APIUSER rollerine izin verilir.");
+            errors.put("roles", "Yalnızca " + formatAllowedRoles(ALLOWED_ROLES) + " rollerine izin verilir.");
         }
+    }
+
+    private static String formatAllowedRoles(Set<String> roles) {
+        List<String> list = List.of("ADMIN", "USER", "APIUSER");
+        return String.join(", ", list.subList(0, list.size() - 1)) + " ve " + list.get(list.size() - 1);
+    }
+
+    private String resolveActor(String currentUsername) {
+        return (currentUsername != null && !currentUsername.isBlank()) ? currentUsername : "system";
     }
 }

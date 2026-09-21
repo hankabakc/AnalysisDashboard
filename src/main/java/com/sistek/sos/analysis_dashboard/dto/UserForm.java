@@ -19,7 +19,7 @@ public record UserForm(
 ) {
     public UserForm {
         username = (username == null) ? "" : username.strip();
-        password = (password == null) ? "" : password.strip();
+        password = (password == null) ? "" : password;
         roles = (roles == null) ? Set.of() : roles;
     }
 }

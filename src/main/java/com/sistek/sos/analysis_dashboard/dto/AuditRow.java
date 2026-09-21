@@ -13,7 +13,6 @@ import java.time.format.DateTimeFormatter;
 public record AuditRow(
         Long id,
         String occurredAt,
-        String event,
         String eventLabel,
         String eventIcon,
         String eventBadgeClass,
@@ -74,7 +73,6 @@ public record AuditRow(
         return new AuditRow(
                 log.getId(),
                 formattedDate,
-                event,
                 label,
                 icon,
                 badgeClass,
