@@ -1,5 +1,9 @@
 package com.sistek.sos.analysis_dashboard.controllers;
 
+import com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import jakarta.servlet.http.HttpSessionEvent;
 import com.sistek.sos.analysis_dashboard.TestcontainersConfig;
 import com.sistek.sos.analysis_dashboard.dto.AuditRow;
 import com.sistek.sos.analysis_dashboard.entities.AppAuditLog;
@@ -62,7 +66,7 @@ class AuditControllerTest {
     private JwtService jwtService;
 
     @Autowired
-    private com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener sessionAuditListener;
+    private SessionAuditListener sessionAuditListener;
 
     @Test
     @Order(1)
@@ -583,14 +587,14 @@ class AuditControllerTest {
 
         // LOGOUT_IN_PROGRESS_ATTR işaretli oturum kapandığında da SESSION_EXPIRED oluşmadığı doğrulanır
         MockHttpSession mockLogoutSession = new MockHttpSession();
-        mockLogoutSession.setAttribute(com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener.LOGOUT_IN_PROGRESS_ATTR, Boolean.TRUE);
-        org.springframework.security.core.context.SecurityContextImpl logoutContext =
-                new org.springframework.security.core.context.SecurityContextImpl(
+        mockLogoutSession.setAttribute(SessionAuditListener.LOGOUT_IN_PROGRESS_ATTR, Boolean.TRUE);
+        SecurityContextImpl logoutContext =
+                new SecurityContextImpl(
                         new UsernamePasswordAuthenticationToken("user", "n/a", List.of(new SimpleGrantedAuthority("ROLE_USER"))));
         mockLogoutSession.setAttribute(
-                org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
                 logoutContext);
-        sessionAuditListener.sessionDestroyed(new jakarta.servlet.http.HttpSessionEvent(mockLogoutSession));
+        sessionAuditListener.sessionDestroyed(new HttpSessionEvent(mockLogoutSession));
 
         long afterLogout = appAuditLogRepository.findAll().stream()
                 .filter(l -> "LOGOUT".equals(l.getEvent()) && "user".equals(l.getActor()))
@@ -608,8 +612,8 @@ class AuditControllerTest {
     @DisplayName("19. Oturum zaman aşımı / geçersiz kılınması -> SecurityContext üzerinden 1 SESSION_EXPIRED (actor=username, target=null)")
     void sessionTimeout_generatesSessionExpiredEvent() {
         MockHttpSession session = new MockHttpSession();
-        org.springframework.security.core.context.SecurityContextImpl securityContext =
-                new org.springframework.security.core.context.SecurityContextImpl(
+        SecurityContextImpl securityContext =
+                new SecurityContextImpl(
                         new UsernamePasswordAuthenticationToken(
                                 "zamanAsimiKullanici",
                                 "n/a",
@@ -617,7 +621,7 @@ class AuditControllerTest {
                         )
                 );
         session.setAttribute(
-                org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
                 securityContext
         );
 
@@ -625,7 +629,7 @@ class AuditControllerTest {
                 .filter(l -> "SESSION_EXPIRED".equals(l.getEvent()) && "zamanAsimiKullanici".equals(l.getActor()))
                 .count();
 
-        sessionAuditListener.sessionDestroyed(new jakarta.servlet.http.HttpSessionEvent(session));
+        sessionAuditListener.sessionDestroyed(new HttpSessionEvent(session));
 
         List<AppAuditLog> logs = appAuditLogRepository.findAll().stream()
                 .filter(l -> "SESSION_EXPIRED".equals(l.getEvent()) && "zamanAsimiKullanici".equals(l.getActor()))
@@ -661,12 +665,12 @@ class AuditControllerTest {
 
         // 1. Hiçbir güvenlik bağlamı olmayan oturum
         MockHttpSession emptySession = new MockHttpSession();
-        sessionAuditListener.sessionDestroyed(new jakarta.servlet.http.HttpSessionEvent(emptySession));
+        sessionAuditListener.sessionDestroyed(new HttpSessionEvent(emptySession));
 
         // 2. anonymousUser oturumu
         MockHttpSession anonSession = new MockHttpSession();
-        org.springframework.security.core.context.SecurityContextImpl anonContext =
-                new org.springframework.security.core.context.SecurityContextImpl(
+        SecurityContextImpl anonContext =
+                new SecurityContextImpl(
                         new UsernamePasswordAuthenticationToken(
                                 "anonymousUser",
                                 "n/a",
@@ -674,10 +678,10 @@ class AuditControllerTest {
                         )
                 );
         anonSession.setAttribute(
-                org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
                 anonContext
         );
-        sessionAuditListener.sessionDestroyed(new jakarta.servlet.http.HttpSessionEvent(anonSession));
+        sessionAuditListener.sessionDestroyed(new HttpSessionEvent(anonSession));
 
         long afterCount = appAuditLogRepository.findAll().stream()
                 .filter(l -> "SESSION_EXPIRED".equals(l.getEvent()))
