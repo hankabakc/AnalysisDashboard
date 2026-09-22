@@ -1,5 +1,6 @@
 package com.sistek.sos.analysis_dashboard.listeners;
 
+import com.sistek.sos.analysis_dashboard.dto.AuditEvent;
 import com.sistek.sos.analysis_dashboard.services.AuditService;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -29,7 +30,7 @@ public class SecurityAuditListener {
         if (event.getAuthentication() instanceof UsernamePasswordAuthenticationToken auth) {
             String actor = AuditService.extractAuthenticatedActor(auth);
             if (actor != null) {
-                auditService.record("LOGIN_SUCCESS", actor, null, null, null);
+                auditService.record(AuditEvent.LOGIN_SUCCESS, actor, null, null, null);
             }
         }
     }
@@ -40,7 +41,7 @@ public class SecurityAuditListener {
         if (auth instanceof UsernamePasswordAuthenticationToken) {
             String actor = (auth.getName() != null) ? auth.getName() : "unknown";
             // Asla parola veya hata türü (kullanıcı yok vs.) yazılmaz, sadece denenen kullanıcı adı actor olarak yazılır
-            auditService.record("LOGIN_FAILURE", actor, null, null, null);
+            auditService.record(AuditEvent.LOGIN_FAILURE, actor, null, null, null);
         }
     }
 }

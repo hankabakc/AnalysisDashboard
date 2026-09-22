@@ -28,55 +28,54 @@ public record AuditRow(
         String formattedDate = log.getOccurredAt() != null ? FORMATTER.format(log.getOccurredAt()) : "-";
         String event = log.getEvent() != null ? log.getEvent() : "";
 
-        String label;
-        String icon;
-        String badgeClass;
+        // Tanınmayan değer (elle eklenmiş ya da eski kayıt) ham adıyla basılır
+        String label = event;
+        String icon = "ℹ️";
+        String badgeClass = "bg-secondary";
 
-        switch (event) {
-            case "LOGIN_SUCCESS" -> {
-                label = "Giriş Başarılı";
-                icon = "🟢";
-                badgeClass = "bg-success";
-            }
-            case "LOGIN_FAILURE" -> {
-                label = "Giriş Başarısız";
-                icon = "🔴";
-                badgeClass = "bg-danger";
-            }
-            case "LOGOUT" -> {
-                label = "Çıkış Yapıldı";
-                icon = "🚪";
-                badgeClass = "bg-secondary";
-            }
-            case "USER_CREATED" -> {
-                label = "Kullanıcı Eklendi";
-                icon = "➕";
-                badgeClass = "bg-primary";
-            }
-            case "USER_UPDATED" -> {
-                label = "Kullanıcı Güncellendi";
-                icon = "✏️";
-                badgeClass = "bg-warning text-dark";
-            }
-            case "USER_DELETED" -> {
-                label = "Kullanıcı Silindi";
-                icon = "🗑️";
-                badgeClass = "bg-danger";
-            }
-            case "ACCESS_DENIED" -> {
-                label = "Yetkisiz Erişim";
-                icon = "⛔";
-                badgeClass = "bg-danger";
-            }
-            case "SESSION_EXPIRED" -> {
-                label = "Oturum Süresi Doldu";
-                icon = "⏱️";
-                badgeClass = "bg-secondary";
-            }
-            default -> {
-                label = event;
-                icon = "ℹ️";
-                badgeClass = "bg-secondary";
+        AuditEvent knownEvent = AuditEvent.fromStoredValue(event);
+        if (knownEvent != null) {
+            switch (knownEvent) {
+                case LOGIN_SUCCESS -> {
+                    label = "Giriş Başarılı";
+                    icon = "🟢";
+                    badgeClass = "bg-success";
+                }
+                case LOGIN_FAILURE -> {
+                    label = "Giriş Başarısız";
+                    icon = "🔴";
+                    badgeClass = "bg-danger";
+                }
+                case LOGOUT -> {
+                    label = "Çıkış Yapıldı";
+                    icon = "🚪";
+                    badgeClass = "bg-secondary";
+                }
+                case USER_CREATED -> {
+                    label = "Kullanıcı Eklendi";
+                    icon = "➕";
+                    badgeClass = "bg-primary";
+                }
+                case USER_UPDATED -> {
+                    label = "Kullanıcı Güncellendi";
+                    icon = "✏️";
+                    badgeClass = "bg-warning text-dark";
+                }
+                case USER_DELETED -> {
+                    label = "Kullanıcı Silindi";
+                    icon = "🗑️";
+                    badgeClass = "bg-danger";
+                }
+                case ACCESS_DENIED -> {
+                    label = "Yetkisiz Erişim";
+                    icon = "⛔";
+                    badgeClass = "bg-danger";
+                }
+                case SESSION_EXPIRED -> {
+                    label = "Oturum Süresi Doldu";
+                    icon = "⏱️";
+                    badgeClass = "bg-secondary";
+                }
             }
         }
 

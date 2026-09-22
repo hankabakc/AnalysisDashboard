@@ -1,5 +1,6 @@
 package com.sistek.sos.analysis_dashboard.services;
 
+import com.sistek.sos.analysis_dashboard.dto.AuditEvent;
 import com.sistek.sos.analysis_dashboard.dto.AuditRow;
 import com.sistek.sos.analysis_dashboard.dto.PageQuery;
 import com.sistek.sos.analysis_dashboard.entities.AppAuditLog;
@@ -23,7 +24,7 @@ import java.time.Instant;
 @Transactional
 public class AuditService {
 
-    public static final int MAX_ACTOR_TARGET_LENGTH = 50;
+    private static final int MAX_ACTOR_TARGET_LENGTH = 50;
 
     /** Kimliği doğrulanmış ve anonim olmayan kullanıcının adını döner (ENG-02 §1). */
     public static String extractAuthenticatedActor(Authentication auth) {
@@ -41,16 +42,16 @@ public class AuditService {
     /**
      * Yeni bir denetim kaydı ekler.
      *
-     * @param event    Olay türü (USER_CREATED, USER_UPDATED, USER_DELETED, LOGIN_SUCCESS, LOGIN_FAILURE, LOGOUT)
+     * @param event    Olay türü (AuditEvent); veritabanına adı yazılır
      * @param actor    İşlemi gerçekleştiren kullanıcı (veya oturum denemesi yapılan kullanıcı adı)
      * @param target   İşlemden etkilenen kullanıcı (varsa)
      * @param oldValue Değişiklik öncesi durum / eski değer (yalnızca değişen alanlar)
      * @param newValue Değişiklik sonrası durum / yeni değer (yalnızca değişen alanlar)
      */
-    public void record(String event, String actor, String target, String oldValue, String newValue) {
+    public void record(AuditEvent event, String actor, String target, String oldValue, String newValue) {
         AppAuditLog log = new AppAuditLog(
                 Instant.now(),
-                event,
+                event.name(),
                 truncate(actor, MAX_ACTOR_TARGET_LENGTH),
                 truncate(target, MAX_ACTOR_TARGET_LENGTH),
                 oldValue,

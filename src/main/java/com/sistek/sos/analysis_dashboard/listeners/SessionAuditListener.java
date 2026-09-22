@@ -1,5 +1,6 @@
 package com.sistek.sos.analysis_dashboard.listeners;
 
+import com.sistek.sos.analysis_dashboard.dto.AuditEvent;
 import com.sistek.sos.analysis_dashboard.services.AuditService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpSessionEvent;
@@ -49,7 +50,7 @@ public class SessionAuditListener implements HttpSessionListener {
         if (sc instanceof SecurityContext context) {
             String actor = AuditService.extractAuthenticatedActor(context.getAuthentication());
             if (actor != null) {
-                auditService.record("SESSION_EXPIRED", actor, null, null, null);
+                auditService.record(AuditEvent.SESSION_EXPIRED, actor, null, null, null);
             }
         }
     }

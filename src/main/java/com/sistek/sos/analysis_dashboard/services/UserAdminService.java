@@ -1,5 +1,6 @@
 package com.sistek.sos.analysis_dashboard.services;
 
+import com.sistek.sos.analysis_dashboard.dto.AuditEvent;
 import com.sistek.sos.analysis_dashboard.dto.PageQuery;
 import com.sistek.sos.analysis_dashboard.dto.UserForm;
 import com.sistek.sos.analysis_dashboard.dto.UserRow;
@@ -37,10 +38,10 @@ public class UserAdminService {
             "USER",
             "APIUSER"
     )));
-    public static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-z0-9._-]+$");
-    public static final int MIN_PASSWORD_LENGTH = 12;
-    public static final int MIN_USERNAME_LENGTH = 3;
-    public static final int MAX_USERNAME_LENGTH = 50;
+    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-z0-9._-]+$");
+    private static final int MIN_PASSWORD_LENGTH = 12;
+    private static final int MIN_USERNAME_LENGTH = 3;
+    private static final int MAX_USERNAME_LENGTH = 50;
 
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
@@ -107,7 +108,7 @@ public class UserAdminService {
 
         // Denetim kaydı: USER_CREATED, target = yeni kullanıcı, new_value rolleri içerir, old_value boş
         String newValue = "roles=" + form.roles() + ", enabled=" + form.enabled();
-        auditService.record("USER_CREATED", currentUsername, form.username(), null, newValue);
+        auditService.record(AuditEvent.USER_CREATED, currentUsername, form.username(), null, newValue);
     }
 
     /**
@@ -191,7 +192,7 @@ public class UserAdminService {
             String oldValue = oldChanges.isEmpty() ? null : String.join(", ", oldChanges);
             String newValue = newChanges.isEmpty() ? null : String.join(", ", newChanges);
 
-            auditService.record("USER_UPDATED", currentUsername, username, oldValue, newValue);
+            auditService.record(AuditEvent.USER_UPDATED, currentUsername, username, oldValue, newValue);
         }
     }
 
@@ -219,7 +220,7 @@ public class UserAdminService {
         appUserRepository.delete(user);
 
         // Denetim kaydı: USER_DELETED, kullanıcı silinse de kayıt durur
-        auditService.record("USER_DELETED", currentUsername, username, oldValue, null);
+        auditService.record(AuditEvent.USER_DELETED, currentUsername, username, oldValue, null);
     }
 
     private void validatePassword(String password, boolean required, Map<String, String> errors) {

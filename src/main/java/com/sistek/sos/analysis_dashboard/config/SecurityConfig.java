@@ -1,5 +1,6 @@
 package com.sistek.sos.analysis_dashboard.config;
 
+import com.sistek.sos.analysis_dashboard.dto.AuditEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener;
 import com.sistek.sos.analysis_dashboard.services.AuditService;
@@ -92,7 +93,7 @@ public class SecurityConfig {
                 .accessDeniedHandler((request, response, e) -> {
                     String actor = AuditService.extractAuthenticatedActor(SecurityContextHolder.getContext().getAuthentication());
                     if (actor != null) {
-                        auditService.record("ACCESS_DENIED", actor, request.getRequestURI(), null, null);
+                        auditService.record(AuditEvent.ACCESS_DENIED, actor, request.getRequestURI(), null, null);
                     }
                     writeProblem(request, response,
                             HttpStatus.FORBIDDEN, "Erişim Reddedildi",
@@ -132,7 +133,7 @@ public class SecurityConfig {
                 .accessDeniedHandler((request, response, accessDeniedException) -> {
                     String actor = AuditService.extractAuthenticatedActor(SecurityContextHolder.getContext().getAuthentication());
                     if (actor != null) {
-                        auditService.record("ACCESS_DENIED", actor, request.getRequestURI(), null, null);
+                        auditService.record(AuditEvent.ACCESS_DENIED, actor, request.getRequestURI(), null, null);
                     }
                     response.sendError(HttpStatus.FORBIDDEN.value());
                 })
@@ -152,7 +153,7 @@ public class SecurityConfig {
                     }
                     String actor = AuditService.extractAuthenticatedActor(authentication);
                     if (actor != null) {
-                        auditService.record("LOGOUT", actor, null, null, null);
+                        auditService.record(AuditEvent.LOGOUT, actor, null, null, null);
                     }
                 })
                 .permitAll()
