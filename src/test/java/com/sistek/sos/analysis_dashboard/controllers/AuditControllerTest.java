@@ -584,7 +584,12 @@ class AuditControllerTest {
         // LOGOUT_IN_PROGRESS_ATTR işaretli oturum kapandığında da SESSION_EXPIRED oluşmadığı doğrulanır
         MockHttpSession mockLogoutSession = new MockHttpSession();
         mockLogoutSession.setAttribute(com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener.LOGOUT_IN_PROGRESS_ATTR, Boolean.TRUE);
-        mockLogoutSession.setAttribute(com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener.AUTH_USER_ATTR, "user");
+        org.springframework.security.core.context.SecurityContextImpl logoutContext =
+                new org.springframework.security.core.context.SecurityContextImpl(
+                        new UsernamePasswordAuthenticationToken("user", "n/a", List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+        mockLogoutSession.setAttribute(
+                org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                logoutContext);
         sessionAuditListener.sessionDestroyed(new jakarta.servlet.http.HttpSessionEvent(mockLogoutSession));
 
         long afterLogout = appAuditLogRepository.findAll().stream()
@@ -600,10 +605,21 @@ class AuditControllerTest {
 
     @Test
     @Order(19)
-    @DisplayName("19. Oturum zaman aşımı / geçersiz kılınması -> 1 SESSION_EXPIRED (actor=username, target=null)")
+    @DisplayName("19. Oturum zaman aşımı / geçersiz kılınması -> SecurityContext üzerinden 1 SESSION_EXPIRED (actor=username, target=null)")
     void sessionTimeout_generatesSessionExpiredEvent() {
         MockHttpSession session = new MockHttpSession();
-        session.setAttribute(com.sistek.sos.analysis_dashboard.listeners.SessionAuditListener.AUTH_USER_ATTR, "zamanAsimiKullanici");
+        org.springframework.security.core.context.SecurityContextImpl securityContext =
+                new org.springframework.security.core.context.SecurityContextImpl(
+                        new UsernamePasswordAuthenticationToken(
+                                "zamanAsimiKullanici",
+                                "n/a",
+                                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                        )
+                );
+        session.setAttribute(
+                org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                securityContext
+        );
 
         long beforeCount = appAuditLogRepository.findAll().stream()
                 .filter(l -> "SESSION_EXPIRED".equals(l.getEvent()) && "zamanAsimiKullanici".equals(l.getActor()))
@@ -633,6 +649,41 @@ class AuditControllerTest {
                 .andExpect(content().string(containsString("⛔")))
                 .andExpect(content().string(containsString("Oturum Süresi Doldu")))
                 .andExpect(content().string(containsString("⏱️")));
+    }
+
+    @Test
+    @Order(21)
+    @DisplayName("21. Oturumda SecurityContext yoksa veya anonim kullanıcıysa sessionDestroyed çağrısı 0 SESSION_EXPIRED üretir")
+    void sessionDestroyed_withoutSecurityContextOrAnonymous_doesNotGenerateAuditLog() {
+        long beforeCount = appAuditLogRepository.findAll().stream()
+                .filter(l -> "SESSION_EXPIRED".equals(l.getEvent()))
+                .count();
+
+        // 1. Hiçbir güvenlik bağlamı olmayan oturum
+        MockHttpSession emptySession = new MockHttpSession();
+        sessionAuditListener.sessionDestroyed(new jakarta.servlet.http.HttpSessionEvent(emptySession));
+
+        // 2. anonymousUser oturumu
+        MockHttpSession anonSession = new MockHttpSession();
+        org.springframework.security.core.context.SecurityContextImpl anonContext =
+                new org.springframework.security.core.context.SecurityContextImpl(
+                        new UsernamePasswordAuthenticationToken(
+                                "anonymousUser",
+                                "n/a",
+                                List.of(new SimpleGrantedAuthority("ROLE_ANONYMOUS"))
+                        )
+                );
+        anonSession.setAttribute(
+                org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                anonContext
+        );
+        sessionAuditListener.sessionDestroyed(new jakarta.servlet.http.HttpSessionEvent(anonSession));
+
+        long afterCount = appAuditLogRepository.findAll().stream()
+                .filter(l -> "SESSION_EXPIRED".equals(l.getEvent()))
+                .count();
+
+        assertThat(afterCount).isEqualTo(beforeCount);
     }
 
     private String createJwtToken(String username, List<String> authorities) {
