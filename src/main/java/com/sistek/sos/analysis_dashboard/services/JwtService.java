@@ -26,15 +26,25 @@ import java.util.List;
 @Service
 public class JwtService {
 
+    /** HS256 en az 256 bitlik (32 bayt) anahtar ister. */
+    private static final int MIN_SECRET_BYTES = 32;
+    private static final String ROLE_PREFIX = "ROLE_";
+
     private final JwtEncoder jwtEncoder;
     private final JwtDecoder jwtDecoder;
     private final long expirationSeconds;
 
     public JwtService(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration-seconds:3600}") long expirationSeconds) {
+            @Value("${jwt.expiration-seconds}") long expirationSeconds) {
         this.expirationSeconds = expirationSeconds;
-        SecretKey secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        // Kisa anahtar acilista degil, ilk girisde patlardi; anahtarin kendisi mesaja yazilmaz
+        if (keyBytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "jwt.secret en az " + MIN_SECRET_BYTES + " karakter olmalıdır (HS256 için 256 bit); verilen uzunluk: " + keyBytes.length);
+        }
+        SecretKey secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
         this.jwtEncoder = new NimbusJwtEncoder(new ImmutableSecret<>(secretKey));
         this.jwtDecoder = NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(MacAlgorithm.HS256).build();
     }
@@ -44,7 +54,7 @@ public class JwtService {
         Instant now = Instant.now();
         List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .map(auth -> auth.startsWith("ROLE_") ? auth.substring(5) : auth)
+                .map(auth -> auth.startsWith(ROLE_PREFIX) ? auth.substring(ROLE_PREFIX.length()) : auth)
                 .toList();
 
         JwtClaimsSet claims = JwtClaimsSet.builder()

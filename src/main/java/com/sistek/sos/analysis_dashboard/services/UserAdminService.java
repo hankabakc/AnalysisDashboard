@@ -107,7 +107,7 @@ public class UserAdminService {
 
         // Denetim kaydı: USER_CREATED, target = yeni kullanıcı, new_value rolleri içerir, old_value boş
         String newValue = "roles=" + form.roles() + ", enabled=" + form.enabled();
-        auditService.record("USER_CREATED", resolveActor(currentUsername), form.username(), null, newValue);
+        auditService.record("USER_CREATED", currentUsername, form.username(), null, newValue);
     }
 
     /**
@@ -191,7 +191,7 @@ public class UserAdminService {
             String oldValue = oldChanges.isEmpty() ? null : String.join(", ", oldChanges);
             String newValue = newChanges.isEmpty() ? null : String.join(", ", newChanges);
 
-            auditService.record("USER_UPDATED", resolveActor(currentUsername), username, oldValue, newValue);
+            auditService.record("USER_UPDATED", currentUsername, username, oldValue, newValue);
         }
     }
 
@@ -219,7 +219,7 @@ public class UserAdminService {
         appUserRepository.delete(user);
 
         // Denetim kaydı: USER_DELETED, kullanıcı silinse de kayıt durur
-        auditService.record("USER_DELETED", resolveActor(currentUsername), username, oldValue, null);
+        auditService.record("USER_DELETED", currentUsername, username, oldValue, null);
     }
 
     private void validatePassword(String password, boolean required, Map<String, String> errors) {
@@ -238,9 +238,5 @@ public class UserAdminService {
         } else if (!ALLOWED_ROLES.containsAll(roles)) {
             errors.put("roles", "Yalnızca " + String.join(", ", ALLOWED_ROLES) + " rollerine izin verilir.");
         }
-    }
-
-    private String resolveActor(String currentUsername) {
-        return (currentUsername != null && !currentUsername.isBlank()) ? currentUsername : "system";
     }
 }

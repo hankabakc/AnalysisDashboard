@@ -68,8 +68,7 @@ public class UserAdminController {
                              Model model,
                              RedirectAttributes redirectAttributes) {
         try {
-            String actor = (authentication != null) ? authentication.getName() : "admin";
-            userAdminService.createUser(form, actor);
+            userAdminService.createUser(form, authentication.getName());
             redirectAttributes.addFlashAttribute("successMessage", "'" + form.username() + "' kullanıcısı başarıyla oluşturuldu.");
             return "redirect:/admin/users";
         } catch (UserValidationException e) {
