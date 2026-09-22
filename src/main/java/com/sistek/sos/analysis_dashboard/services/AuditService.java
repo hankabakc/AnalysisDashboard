@@ -5,6 +5,7 @@ import com.sistek.sos.analysis_dashboard.dto.AuditRow;
 import com.sistek.sos.analysis_dashboard.dto.PageQuery;
 import com.sistek.sos.analysis_dashboard.entities.AppAuditLog;
 import com.sistek.sos.analysis_dashboard.repositories.AppAuditLogRepository;
+import com.sistek.sos.analysis_dashboard.repositories.LikeEscape;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -75,7 +76,7 @@ public class AuditService {
 
         Page<AppAuditLog> page = (trimmedQuery == null)
                 ? auditLogRepository.findAll(pageable)
-                : auditLogRepository.searchLogs(escapeLike(trimmedQuery), pageable);
+                : auditLogRepository.searchLogs(LikeEscape.escape(trimmedQuery), pageable);
 
         return page.map(AuditRow::from);
     }
@@ -87,13 +88,4 @@ public class AuditService {
         return value.substring(0, maxLength);
     }
 
-    private static String escapeLike(String input) {
-        if (input == null) {
-            return null;
-        }
-        return input
-                .replace("!", "!!")
-                .replace("%", "!%")
-                .replace("_", "!_");
-    }
 }

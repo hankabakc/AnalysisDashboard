@@ -162,6 +162,25 @@ class SecurityTest {
     }
 
     @Test
+    @DisplayName("POST /api/auth/login pasif hesapla: 401 ProblemDetail döner (500 değil, hesap durumu sızdırmaz)")
+    void apiLoginWithDisabledAccountReturns401() throws Exception {
+        AppUser user = appUserRepository.findById("apiuser").orElseThrow();
+        user.setEnabled(false);
+        appUserRepository.save(user);
+        try {
+            mvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"username\":\"apiuser\",\"password\":\"apiuser123\"}"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                    .andExpect(jsonPath("$.detail", is("Kullanıcı adı veya parola hatalı.")));
+        } finally {
+            user.setEnabled(true);
+            appUserRepository.save(user);
+        }
+    }
+
+    @Test
     @DisplayName("GET /api/lines token'sız: 401 ProblemDetail döner, HTML login'e yönlendirmez")
     void apiWithoutTokenReturns401ProblemDetail() throws Exception {
         mvc.perform(get("/api/lines"))

@@ -7,6 +7,7 @@ import com.sistek.sos.analysis_dashboard.dto.LogEntry;
 import com.sistek.sos.analysis_dashboard.dto.PageQuery;
 import com.sistek.sos.analysis_dashboard.exceptions.ResourceNotFoundException;
 import com.sistek.sos.analysis_dashboard.repositories.BarcodeRepository;
+import com.sistek.sos.analysis_dashboard.repositories.LikeEscape;
 import com.sistek.sos.analysis_dashboard.repositories.LineInfoRepository;
 import com.sistek.sos.analysis_dashboard.repositories.LineLogRepository;
 import org.springframework.data.domain.Page;
@@ -54,7 +55,7 @@ public class LineService {
 
     /** Genel barkod araması; lineId null ise tüm hatlarda arar. */
     public Page<BarcodeRow> findBarcodes(String lineId, BarcodeFilter filter, PageQuery pageQuery) {
-        return barcodeRepository.search(lineId, filter.barcodeQuery(), filter.status(), pageQuery.toPageable("cre_date", "barcode"))
+        return barcodeRepository.search(lineId, LikeEscape.escape(filter.barcodeQuery()), filter.status(), pageQuery.toPageable("cre_date", "barcode"))
                 .map(b -> new BarcodeRow(b.getBarcode(), b.getLineId(), b.getCreDate(), b.getStatus()));
     }
 

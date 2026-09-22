@@ -112,6 +112,14 @@ class ApiControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/lines/1/barcodes?barcodeQuery=%: joker karakter harfiyen aranir, tum kayitlari dondurmez")
+    void barcodeQueryWildcardIsEscaped() throws Exception {
+        mvc.perform(get("/api/lines/1/barcodes").param("barcodeQuery", "%"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(0)));
+    }
+
+    @Test
     @DisplayName("GET /api/lines/1/barcodes?barcodeQuery=GU132: totalElements=172")
     void getLine1BarcodesWithQuery() throws Exception {
         mvc.perform(get("/api/lines/1/barcodes").param("barcodeQuery", "GU132"))
