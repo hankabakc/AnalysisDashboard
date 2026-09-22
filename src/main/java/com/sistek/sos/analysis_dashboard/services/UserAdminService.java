@@ -236,13 +236,8 @@ public class UserAdminService {
         if (roles == null || roles.isEmpty()) {
             errors.put("roles", "En az bir rol seçilmelidir.");
         } else if (!ALLOWED_ROLES.containsAll(roles)) {
-            errors.put("roles", "Yalnızca " + formatAllowedRoles() + " rollerine izin verilir.");
+            errors.put("roles", "Yalnızca " + String.join(", ", ALLOWED_ROLES) + " rollerine izin verilir.");
         }
-    }
-
-    private static String formatAllowedRoles() {
-        List<String> list = new ArrayList<>(ALLOWED_ROLES);
-        return String.join(", ", list.subList(0, list.size() - 1)) + " ve " + list.get(list.size() - 1);
     }
 
     private String resolveActor(String currentUsername) {

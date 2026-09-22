@@ -149,7 +149,7 @@ class UserAdminControllerTest {
                         .param("roles", "SUPERADMIN")
                         .param("enabled", "true"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Yalnızca ADMIN, USER ve APIUSER")));
+                .andExpect(content().string(containsString("Yalnızca ADMIN, USER, APIUSER rollerine izin verilir.")));
 
         assertThat(appUserRepository.existsById(testUser)).isFalse();
     }
