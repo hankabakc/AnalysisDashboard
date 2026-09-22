@@ -7,13 +7,14 @@ import com.sistek.sos.analysis_dashboard.repositories.AppAuditLogRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
 /**
- * Denetim kaydı servisi (T-017, T-018).
+ * Denetim kaydı servisi (T-017, T-018, T-021).
  * Denetim kaydı yazımı için TEK YAZMA NOKTASIDIR.
  * Kayıtlar başka hiçbir sınıftan doğrudan veritabanına yazılamaz.
  * Zaman damgası daima UTC saklanır (ENG-03 §1.3).
@@ -23,6 +24,13 @@ import java.time.Instant;
 public class AuditService {
 
     public static final int MAX_ACTOR_TARGET_LENGTH = 50;
+
+    /** Kimliği doğrulanmış ve anonim olmayan kullanıcının adını döner (ENG-02 §1). */
+    public static String extractAuthenticatedActor(Authentication auth) {
+        return (auth != null && auth.isAuthenticated()
+                && auth.getName() != null && !auth.getName().isBlank()
+                && !"anonymousUser".equalsIgnoreCase(auth.getName())) ? auth.getName() : null;
+    }
 
     private final AppAuditLogRepository auditLogRepository;
 

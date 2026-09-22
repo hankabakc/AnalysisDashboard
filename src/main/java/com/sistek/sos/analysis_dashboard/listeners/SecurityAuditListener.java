@@ -26,11 +26,11 @@ public class SecurityAuditListener {
 
     @EventListener
     public void onAuthenticationSuccess(AuthenticationSuccessEvent event) {
-        Authentication auth = event.getAuthentication();
-        if (auth instanceof UsernamePasswordAuthenticationToken
-                && auth.getName() != null
-                && !"anonymousUser".equalsIgnoreCase(auth.getName())) {
-            auditService.record("LOGIN_SUCCESS", auth.getName(), null, null, null);
+        if (event.getAuthentication() instanceof UsernamePasswordAuthenticationToken auth) {
+            String actor = AuditService.extractAuthenticatedActor(auth);
+            if (actor != null) {
+                auditService.record("LOGIN_SUCCESS", actor, null, null, null);
+            }
         }
     }
 

@@ -90,9 +90,9 @@ public class SecurityConfig {
                         HttpStatus.UNAUTHORIZED, "Yetkilendirme Gerekli",
                         "Bu uca erişmek için geçerli bir Bearer token gereklidir."))
                 .accessDeniedHandler((request, response, e) -> {
-                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                    if (auth != null && auth.isAuthenticated() && !"anonymousUser".equalsIgnoreCase(auth.getName())) {
-                        auditService.record("ACCESS_DENIED", auth.getName(), request.getRequestURI(), null, null);
+                    String actor = AuditService.extractAuthenticatedActor(SecurityContextHolder.getContext().getAuthentication());
+                    if (actor != null) {
+                        auditService.record("ACCESS_DENIED", actor, request.getRequestURI(), null, null);
                     }
                     writeProblem(request, response,
                             HttpStatus.FORBIDDEN, "Erişim Reddedildi",
@@ -130,9 +130,9 @@ public class SecurityConfig {
                     }
                 })
                 .accessDeniedHandler((request, response, accessDeniedException) -> {
-                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                    if (auth != null && auth.isAuthenticated() && !"anonymousUser".equalsIgnoreCase(auth.getName())) {
-                        auditService.record("ACCESS_DENIED", auth.getName(), request.getRequestURI(), null, null);
+                    String actor = AuditService.extractAuthenticatedActor(SecurityContextHolder.getContext().getAuthentication());
+                    if (actor != null) {
+                        auditService.record("ACCESS_DENIED", actor, request.getRequestURI(), null, null);
                     }
                     response.sendError(HttpStatus.FORBIDDEN.value());
                 })
@@ -150,9 +150,9 @@ public class SecurityConfig {
                     if (session != null) {
                         session.setAttribute(SessionAuditListener.LOGOUT_IN_PROGRESS_ATTR, Boolean.TRUE);
                     }
-                    if (authentication != null && authentication.getName() != null
-                            && !"anonymousUser".equalsIgnoreCase(authentication.getName())) {
-                        auditService.record("LOGOUT", authentication.getName(), null, null, null);
+                    String actor = AuditService.extractAuthenticatedActor(authentication);
+                    if (actor != null) {
+                        auditService.record("LOGOUT", actor, null, null, null);
                     }
                 })
                 .permitAll()
