@@ -235,12 +235,9 @@ for f in src/test/resources/db/sample-data/*.sql; do docker exec -i gb-postgres 
 - 5 sn'de bir PLC sinyali, hatlar ara sıra durup kalkar, çalışan hatlar `SIM…` barkodları okur
 - Barkodlar birkaç saniye sonra "ERP'ye gönderilir": çoğu `SENT`, kalanı gerçekteki üç hata biçimiyle `ERROR`
 - Yalnızca kendi `SIM` barkodlarını işler; elle eklenen `NEW` barkod takılı kalır ("bekliyor" uyarısını görmek için)
+- İlk açılışta **son 30 günün geçmişini** bir kez üretir (~80 bin barkod, birkaç saniye): geçmiş bir gün/vardiya seçildiğinde duruş analizi, saatlik üretim ve hata dağılımı dolu gelir. Gece vardiyası daha seyrek üretir; sonraki açılışlarda geçmiş yeniden üretilmez
 
-Üç kilitle korunur: yalnızca `dev` profili, `dashboard.simulator.enabled=true` (`application-dev.properties`) ve veritabanı adresi **localhost** değilse uygulama açılmaz. Durgun örnek veriye bakmak için ayarı `false` yapın. Sahte barkodları silmek için:
-
-```bash
-docker exec gb-postgres psql -U postgres -d postgres -c "DELETE FROM barcode_data WHERE barcode LIKE 'SIM%'"
-```
+Üç kilitle korunur: yalnızca `dev` profili, `dashboard.simulator.enabled=true` (`application-dev.properties`) ve veritabanı adresi **localhost** değilse uygulama açılmaz. Durgun örnek veriye bakmak için ayarı `false` yapın. Sahte veriyi (geçmiş dahil) silme komutları `application-dev.properties`'tedir; önce loglar, sonra barkodlar silinir.
 
 ### 6. Docker ile (tek komut)
 

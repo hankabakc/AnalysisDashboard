@@ -3,6 +3,7 @@ package com.sistek.sos.analysis_dashboard.dev;
 import com.sistek.sos.analysis_dashboard.TestcontainersConfig;
 import com.sistek.sos.analysis_dashboard.dto.ErpError;
 import com.sistek.sos.analysis_dashboard.repositories.BarcodeRepository;
+import com.sistek.sos.analysis_dashboard.repositories.PlcLogRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -13,7 +14,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -37,6 +40,9 @@ class CollectorSimulatorTest {
 
     @Autowired
     private ApplicationContext context;
+
+    @Autowired
+    private PlcLogRepository plcLogRepository;
 
     private long count(String sql, Object... args) {
         return jdbc.queryForObject(sql, Long.class, args);
@@ -75,6 +81,52 @@ class CollectorSimulatorTest {
         CollectorSimulator simulator = new CollectorSimulator(jdbc, LOCAL_DB, new Random(7));
         simulator.tick(START.plusSeconds(10));
         assertEquals("NEW", jdbc.queryForObject("SELECT status FROM barcode_data WHERE barcode = 'ELLE-1'", String.class));
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Geçmiş (2 gün): her aktif hatta barkod, PASSIVE hatta yok, NEW yok, barkod yalnızca RUN iken, toplayıcı hiç susmamış")
+    void backfillLooksLikeTheCollectorsHistory() {
+        jdbc.update("UPDATE line_info SET status = 'PASSIVE' WHERE line_id = '3'");
+        long foreignBarcodes = count("SELECT count(*) FROM barcode_data");
+        long lineLogBefore = count("SELECT max(seq_no) FROM line_log");
+        LocalDateTime from = START.minusDays(2);
+
+        long inserted = new CollectorSimulator(jdbc, LOCAL_DB, new Random(7)).backfill(START, Duration.ofDays(2));
+
+        assertEquals(inserted, count("SELECT count(*) FROM barcode_data WHERE barcode LIKE 'SIM%'"));
+        assertEquals(foreignBarcodes, count("SELECT count(*) FROM barcode_data WHERE barcode NOT LIKE 'SIM%'"));
+        assertEquals(0, count("""
+                SELECT count(*) FROM line_info i
+                WHERE i.status <> 'PASSIVE' AND NOT EXISTS (SELECT 1 FROM barcode_data b WHERE b.line_id = i.line_id AND b.barcode LIKE 'SIM%')
+                """), "barkodsuz aktif hat");
+        assertEquals(0, count("SELECT count(*) FROM barcode_data WHERE barcode LIKE 'SIM%' AND line_id = '3'"), "PASSIVE hatta barkod");
+        assertEquals(0, count("SELECT count(*) FROM barcode_data WHERE barcode LIKE 'SIM%' AND (status = 'NEW' OR cre_date < ? OR cre_date >= ?)",
+                from, START), "NEW ya da pencere dışı barkod");
+        assertEquals(0, count("SELECT count(*) FROM barcode_data b WHERE b.barcode LIKE 'SIM%' AND b.status = 'ERROR' AND "
+                + BarcodeRepository.ERROR_CODE + " IS NULL"), "tanınmayan hata metni");
+        assertEquals(0, count("""
+                SELECT count(*) FROM barcode_data b
+                WHERE b.barcode LIKE 'SIM%'
+                  AND (SELECT l.status FROM line_log l WHERE l.line_id = b.line_id AND l.seq_no > ? AND l.proc_date <= b.cre_date
+                       ORDER BY l.proc_date DESC, l.seq_no DESC LIMIT 1) IS DISTINCT FROM 'RUN'
+                """, lineLogBefore), "hat RUN değilken okunan barkod");
+        assertTrue(count("SELECT count(*) FROM line_log WHERE seq_no > ? AND status = 'STOP'", lineLogBefore) > 0, "hiç duruş yok");
+        assertEquals(List.of(), plcLogRepository.findCollectorSilences(from, START, START, 60), "toplayıcı sessizliği");
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Geçmiş bir kez üretilir: ikinci açılış en eski SIM barkoduna kadar dolu pencereyi yeniden doldurmaz")
+    void backfillRunsOnce() {
+        CollectorSimulator simulator = new CollectorSimulator(jdbc, LOCAL_DB, new Random(7));
+        simulator.backfill(START, Duration.ofDays(1));
+        long barcodes = count("SELECT count(*) FROM barcode_data");
+        long beats = count("SELECT count(*) FROM plc_log");
+
+        assertEquals(0, simulator.backfill(START.plusMinutes(10), Duration.ofDays(1)));
+        assertEquals(barcodes, count("SELECT count(*) FROM barcode_data"));
+        assertEquals(beats, count("SELECT count(*) FROM plc_log"));
     }
 
     @Test
