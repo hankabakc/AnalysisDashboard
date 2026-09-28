@@ -40,4 +40,16 @@ class DisplayTimeTest {
         assertEquals("424 gün", DisplayTime.duration(Duration.ofDays(424).plusHours(5)));
         assertEquals("0 sn", DisplayTime.duration(Duration.ofSeconds(-3)));
     }
+
+    @Test
+    @DisplayName("durationPrecise: en büyük iki birim, sıfır olan ikinci birim yazılmaz")
+    void durationPreciseUsesTwoUnits() {
+        assertEquals("26 sn", DisplayTime.durationPrecise(Duration.ofMillis(26_008)));
+        assertEquals("4 dk 2 sn", DisplayTime.durationPrecise(Duration.ofSeconds(242)));
+        assertEquals("5 dk", DisplayTime.durationPrecise(Duration.ofMinutes(5)));
+        assertEquals("1 sa 12 dk", DisplayTime.durationPrecise(Duration.ofSeconds(4340)));
+        assertEquals("3 sa", DisplayTime.durationPrecise(Duration.ofHours(3)));
+        assertEquals("1 gün 5 sa", DisplayTime.durationPrecise(Duration.ofHours(29).plusMinutes(10)));
+        assertEquals("0 sn", DisplayTime.durationPrecise(Duration.ZERO));
+    }
 }

@@ -42,4 +42,23 @@ public final class DisplayTime {
         }
         return seconds / 86400 + " gün";
     }
+
+    /** Süreyi en büyük iki birimle yazar: "26 sn", "4 dk 2 sn", "1 sa 12 dk", "1 gün 5 sa"; sıfır olan ikinci birim yazılmaz. */
+    public static String durationPrecise(Duration duration) {
+        long seconds = Math.max(0, duration.toSeconds());
+        if (seconds < 60) {
+            return seconds + " sn";
+        }
+        if (seconds < 3600) {
+            return twoUnits(seconds / 60, "dk", seconds % 60, "sn");
+        }
+        if (seconds < 86400) {
+            return twoUnits(seconds / 3600, "sa", seconds % 3600 / 60, "dk");
+        }
+        return twoUnits(seconds / 86400, "gün", seconds % 86400 / 3600, "sa");
+    }
+
+    private static String twoUnits(long first, String firstUnit, long second, String secondUnit) {
+        return second == 0 ? first + " " + firstUnit : first + " " + firstUnit + " " + second + " " + secondUnit;
+    }
 }

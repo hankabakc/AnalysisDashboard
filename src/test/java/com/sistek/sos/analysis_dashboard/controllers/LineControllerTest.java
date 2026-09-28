@@ -224,6 +224,34 @@ class LineControllerTest {
     }
 
     @Test
+    @DisplayName("GET /line/1 (bu vardiya): duruş analizi %95, 35 duruş, en uzun 26 sn, 72 çizelge parçası (1 veri yok + 36 + 35), en uzun 5 duruş")
+    void lineDowntimeAnalysis() throws Exception {
+        String section = "//section[@aria-label='Çalışma Durumu']";
+        mvc.perform(get("/line/1"))
+                .andExpect(status().isOk())
+                .andExpect(xpath(section + "//dt[normalize-space(.)='Kullanılabilirlik']/following-sibling::dd[1]").string("%95"))
+                .andExpect(xpath(section + "//dt[normalize-space(.)='Çalışma']/following-sibling::dd[1]").string("1 sa 12 dk"))
+                .andExpect(xpath(section + "//dt[normalize-space(.)='Duruş']/following-sibling::dd[1]").string("4 dk 2 sn"))
+                .andExpect(xpath(section + "//dt[normalize-space(.)='Duruş sayısı']/following-sibling::dd[1]").string("35"))
+                .andExpect(xpath(section + "//dt[normalize-space(.)='En uzun duruş']/following-sibling::dd[1]").string("26 sn"))
+                .andExpect(xpath(section + "//div[contains(@class, 'progress-stacked')]/div").nodeCount(72))
+                .andExpect(xpath(section + "//div[contains(@class, 'progress-stacked')]/div[1]/@title").string(containsString("Veri yok")))
+                .andExpect(xpath(section + "//ol/li").nodeCount(5));
+
+        mvc.perform(get("/line/4"))
+                .andExpect(xpath(section + "//dt[normalize-space(.)='Kullanılabilirlik']/following-sibling::dd[1]").string("%100"))
+                .andExpect(xpath(section + "//dt[normalize-space(.)='Duruş sayısı']/following-sibling::dd[1]").string("0"));
+
+        mvc.perform(get("/line/2"))
+                .andExpect(xpath(section).string(containsString("durum kaydı yok")));
+
+        // "Tüm zamanlar" sınırsız sorgu olurdu: analiz yapılmaz, nedeni yazılır
+        mvc.perform(get("/line/1").param("range", "all"))
+                .andExpect(xpath(section).string(containsString("vardiya ya da gün seçildiğinde")))
+                .andExpect(xpath(section + "//div[contains(@class, 'progress-stacked')]").doesNotExist());
+    }
+
+    @Test
     @DisplayName("GET /line/1?day=abc: bozuk tarih 400 döner")
     void invalidDayIsBadRequest() throws Exception {
         mvc.perform(get("/line/1").param("day", "abc").accept(MediaType.TEXT_HTML))

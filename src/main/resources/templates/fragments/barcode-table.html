@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="tr">
 <!--
-  Hat sayfasinin tazelenen veri alani: hattin ERP hata dagilimi, kayit sayisi, barkod tablosu ve sayfalayici.
+  Hat sayfasinin tazelenen veri alani: calisma durumu (durus analizi), hattin ERP hata dagilimi, kayit sayisi,
+  barkod tablosu ve sayfalayici.
   Hem /line/{id} sayfasi hem /fragments/line/{id} tazeleme ucu bu fragment'i cizer.
-  Model: lineId, filter, pageQuery, periodFilter, period, barcodes (Page<BarcodeRow>), errorCounts.
+  Model: lineId, filter, pageQuery, periodFilter, period, barcodes (Page<BarcodeRow>), errorCounts,
+  downtimeSupported, downtime.
 -->
 <body>
 <div th:fragment="barcodeTable">
+    <section th:replace="~{fragments/downtime :: downtime}"></section>
     <section th:replace="~{fragments/error-counts :: errorCounts(${lineId})}"></section>
 
     <div class="d-flex justify-content-between align-items-baseline mb-2">

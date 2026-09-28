@@ -130,6 +130,17 @@ class DashboardControllerTest {
     }
 
     @Test
+    @DisplayName("Hat kartında bu vardiyanın çalışma oranı ve duruş sayısı; kaydı olmayan hatta ve 'tüm zamanlar'da yazılmaz")
+    void lineCardsShowAvailability() throws Exception {
+        String line2 = "//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='2']]";
+        mvc.perform(get("/fragments/dashboard"))
+                .andExpect(xpath(LINE_1 + "//p[contains(., 'Çalışma')]").string(containsString("Çalışma %95 · 35 duruş")))
+                .andExpect(xpath(line2 + "//p[contains(., 'Çalışma')]").doesNotExist());
+        mvc.perform(get("/fragments/dashboard").param("range", "all"))
+                .andExpect(xpath(LINE_1 + "//p[contains(., 'Çalışma')]").doesNotExist());
+    }
+
+    @Test
     @DisplayName("?range=today → Hat 1 197; ?day=2025-07-28 → Hat 1 209, Hat 4 460; &shift=2 → 16 / 33")
     void todayAndSpecificDay() throws Exception {
         String line4 = "//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='4']]";

@@ -4,6 +4,7 @@ import com.sistek.sos.analysis_dashboard.config.RefreshSettings;
 import com.sistek.sos.analysis_dashboard.dto.Period;
 import com.sistek.sos.analysis_dashboard.dto.PeriodFilter;
 import com.sistek.sos.analysis_dashboard.dto.PlcSummary;
+import com.sistek.sos.analysis_dashboard.services.DowntimeService;
 import com.sistek.sos.analysis_dashboard.services.LineService;
 import com.sistek.sos.analysis_dashboard.services.PeriodService;
 import com.sistek.sos.analysis_dashboard.services.PlcService;
@@ -18,13 +19,15 @@ public class DashboardController {
     private final PlcService plcService;
     private final LineService lineService;
     private final PeriodService periodService;
+    private final DowntimeService downtimeService;
     private final RefreshSettings refreshSettings;
 
     public DashboardController(PlcService plcService, LineService lineService, PeriodService periodService,
-                               RefreshSettings refreshSettings) {
+                               DowntimeService downtimeService, RefreshSettings refreshSettings) {
         this.plcService = plcService;
         this.lineService = lineService;
         this.periodService = periodService;
+        this.downtimeService = downtimeService;
         this.refreshSettings = refreshSettings;
     }
 
@@ -52,6 +55,8 @@ public class DashboardController {
         model.addAttribute("plc", plc);
         model.addAttribute("health", plc != null ? plcService.checkCollector(plc) : null);
         model.addAttribute("lines", lineService.findAll(period));
+        // Hat kimliği → duruş analizi; dönem 1 günden uzunsa ya da hattın kaydı yoksa kartta çalışma oranı yazılmaz
+        model.addAttribute("downtimes", downtimeService.analyze(period, null));
         model.addAttribute("errorCounts", lineService.findErrorCounts(null, period));
     }
 }

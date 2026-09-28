@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<!--
+  Hat duruş analizi: seçilen dönemde çalışma/duruş özeti, zaman çizelgesi ve en uzun duruşlar.
+  Hat sayfasının tazelenen alanında çizilir. Model: period, downtimeSupported, downtime (Downtime; kayıt yoksa null).
+  Çizelge renklidir ama bilgi yalnızca renkte değildir: özet sayılar, lejant ve en uzun duruşlar metin olarak da yazılır;
+  her parçanın üzerine gelince durumu, saatleri ve süresi görünür.
+-->
+<body>
+<section th:fragment="downtime" class="card shadow-sm border bg-white mb-4" aria-label="Çalışma Durumu">
+    <div class="card-header bg-white fw-bold">Çalışma durumu</div>
+    <div class="card-body">
+        <p th:unless="${downtimeSupported}" class="text-muted mb-0">
+            Duruş analizi vardiya ya da gün seçildiğinde yapılır ("Tüm zamanlar" için hesaplanmaz).
+        </p>
+        <p th:if="${downtimeSupported and downtime == null}" class="text-muted mb-0">Bu dönem için durum kaydı yok.</p>
+
+        <th:block th:if="${downtimeSupported and downtime != null}">
+            <dl class="d-flex flex-wrap column-gap-5 row-gap-2 mb-3">
+                <div>
+                    <dt class="small text-muted fw-normal">Kullanılabilirlik</dt>
+                    <dd class="h4 fw-bold mb-0" th:text="${downtime.availability != null} ? '%' + ${downtime.availability} : '—'">%95</dd>
+                </div>
+                <div>
+                    <dt class="small text-muted fw-normal">Çalışma</dt>
+                    <dd class="h5 mb-0 text-success" th:text="${downtime.runText()}">1 sa 12 dk</dd>
+                </div>
+                <div>
+                    <dt class="small text-muted fw-normal">Duruş</dt>
+                    <dd class="h5 mb-0 text-danger" th:text="${downtime.stopText()}">4 dk 2 sn</dd>
+                </div>
+                <div>
+                    <dt class="small text-muted fw-normal">Duruş sayısı</dt>
+                    <dd class="h5 mb-0" th:text="${downtime.stopCount}">35</dd>
+                </div>
+                <div>
+                    <dt class="small text-muted fw-normal">En uzun duruş</dt>
+                    <dd class="h5 mb-0" th:text="${downtime.longestStopText()}">26 sn</dd>
+                </div>
+            </dl>
+
+            <!-- Genişlikler dönemin tamamına göredir; süren vardiyada sağdaki boş kısım henüz gelmemiş zamandır -->
+            <div class="progress-stacked mb-2" style="height: 1.25rem;" role="img"
+                 th:attr="aria-label='Zaman çizelgesi: ' + ${period.label} + '. Özet yukarıda, en uzun duruşlar aşağıda yazılıdır.'">
+                <div th:each="segment : ${downtime.segments}" class="progress"
+                     th:style="|width: ${segment.widthPercent}%; height: 1.25rem;|" th:title="${segment.text()}">
+                    <div class="progress-bar" th:classappend="${segment.cssClass()}"></div>
+                </div>
+            </div>
+            <p class="small text-muted mb-3">
+                <span class="d-inline-block rounded bg-success align-middle" style="width: .75rem; height: .75rem;"></span> Çalışıyor ·
+                <span class="d-inline-block rounded bg-danger align-middle" style="width: .75rem; height: .75rem;"></span> Duruş ·
+                <span class="d-inline-block rounded bg-secondary align-middle" style="width: .75rem; height: .75rem;"></span> Pasif ·
+                <span class="d-inline-block rounded bg-secondary bg-opacity-25 align-middle" style="width: .75rem; height: .75rem;"></span> Veri yok ·
+                boş: henüz gelmedi
+            </p>
+
+            <th:block th:unless="${downtime.longestStops.isEmpty()}">
+                <h3 class="h6 fw-bold">En uzun duruşlar</h3>
+                <ol class="small mb-0">
+                    <li th:each="stop : ${downtime.longestStops}"
+                        th:text="${stop.fromText()} + ' · ' + ${stop.durationText()}">31.07.2025 11:29:00 · 26 sn</li>
+                </ol>
+            </th:block>
+        </th:block>
+    </div>
+</section>
+</body>
+</html>

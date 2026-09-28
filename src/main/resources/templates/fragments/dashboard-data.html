@@ -3,7 +3,7 @@
 <!--
   Panonun tazelenen veri alani: PLC karti, hat kartlari (ERP aktarim sayilariyla) ve tum hatlarin ERP hata dagilimi.
   Hem /dashboard sayfasi hem /fragments/dashboard tazeleme ucu bu fragment'i cizer.
-  Model: periodFilter, period, plc (null olabilir), health (plc null ise null), lines, errorCounts.
+  Model: periodFilter, period, plc (null olabilir), health (plc null ise null), lines, downtimes (hat → duruş analizi), errorCounts.
   Sayılar ve hata dağılımı seçilen döneme aittir; "Son barkod" dönemden bağımsızdır.
 -->
 <body>
@@ -70,6 +70,12 @@
                             <dt class="col-8 fw-normal text-secondary"><span aria-hidden="true">⏳</span> Bekleyen</dt>
                             <dd class="col-4 text-end fw-bold mb-0" th:text="${line.pending}">0</dd>
                         </dl>
+                        <th:block th:with="downtime=${downtimes[line.id]}">
+                            <p th:if="${downtime != null and downtime.availability != null}" class="small text-start mt-2 mb-0">
+                                <span aria-hidden="true">⏱</span>
+                                <span th:text="'Çalışma %' + ${downtime.availability} + ' · ' + ${downtime.stopCount} + ' duruş'">Çalışma %95 · 35 duruş</span>
+                            </p>
+                        </th:block>
                         <p class="small text-muted text-start mt-2 mb-0" th:text="'Son barkod: ' + ${line.lastBarcodeText()}">Son barkod: 31.07.2025 12:42:46</p>
                     </div>
                 </a>
