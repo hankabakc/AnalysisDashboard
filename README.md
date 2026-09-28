@@ -24,7 +24,7 @@ Veriyi yazan ve ERP'ye gönderen sistem PLC toplayıcıdır; bu uygulama PLC tab
 | Arayüz | Thymeleaf (sunucu render) · Bootstrap 5.3.3 · htmx 2.0.4 (periyodik tazeleme) — WebJars ile yerel, CDN yok |
 | Test | JUnit 5 · MockMvc · Testcontainers (Docker içinde gerçek PostgreSQL) |
 | Dağıtım | Docker (çok aşamalı imaj, root olmayan kullanıcı) · docker compose · GitHub Actions (her push'ta test + imaj derlemesi) |
-| İzleme | Spring Boot Actuator — yalnızca `/actuator/health` |
+| İzleme | Spring Boot Actuator — `/actuator/health` · Micrometer + Prometheus — `/actuator/prometheus` (entegrasyon sağlığı metrikleri) |
 
 ---
 
@@ -122,11 +122,11 @@ Uygulama, Spring Security ile korunmakta olup rol bazlı erişim denetimi (RBAC)
 
 ### Roller ve Yetki Matrisi
 
-| Rol | Web Arayüzü (`/dashboard`, `/line/**`, `/barcodes`) | REST API (`/api/**`) | Swagger & Dokümantasyon (`/swagger-ui/**`, `/v3/api-docs/**`) |
-| :--- | :--- | :--- | :--- |
-| `ADMIN` | ✅ Açık | ✅ Açık | ✅ Açık |
-| `USER` | ✅ Açık | ❌ Kapalı | ❌ Kapalı |
-| `APIUSER` | ❌ Kapalı | ✅ Açık | ❌ Kapalı |
+| Rol | Web Arayüzü (`/dashboard`, `/line/**`, `/barcodes`) | REST API (`/api/**`) | Swagger & Dokümantasyon (`/swagger-ui/**`, `/v3/api-docs/**`) | Metrikler (`/actuator/prometheus`) |
+| :--- | :--- | :--- | :--- | :--- |
+| `ADMIN` | ✅ Açık | ✅ Açık | ✅ Açık | ✅ Açık |
+| `USER` | ✅ Açık | ❌ Kapalı | ❌ Kapalı | ❌ Kapalı |
+| `APIUSER` | ❌ Kapalı | ✅ Açık | ❌ Kapalı | ✅ Açık |
 
 ### Canlı Ortamda İlk Yönetici
 
@@ -134,7 +134,38 @@ Canlı ortamda (profil verilmeden) hiçbir kullanıcı otomatik oluşmaz. İlk g
 
 ### Sağlık Ucu
 
-`/actuator/health` BT izleme ve konteyner sağlık kontrolü içindir: herkese açık ama yalnızca `{"status":"UP"}` döner. Veritabanı ve disk ayrıntılarını yalnızca ADMIN oturumu görür. Başka actuator ucu açık değildir.
+`/actuator/health` BT izleme ve konteyner sağlık kontrolü içindir: herkese açık ama yalnızca `{"status":"UP"}` döner. Veritabanı ve disk ayrıntılarını yalnızca ADMIN oturumu görür. Açık olan diğer tek actuator ucu aşağıdaki metrik ucudur.
+
+### Prometheus Metrikleri
+
+`/actuator/prometheus` BT'nin izleme sistemi (Prometheus/Grafana) içindir: **HTTP Basic**, yalnızca `ADMIN` ve `APIUSER` (kimliksiz 401, `USER` 403). Başarılı kazıma denetim kaydına yazılmaz (15 sn'de bir `LOGIN_SUCCESS` yığılmasın); başarısız deneme `LOGIN_FAILURE` olarak kaydedilir. Değerler 15 sn'de bir tek seferde tazelenir (kazıma veritabanına sorgu atmaz); tazeleme hata verirse değerler kaldırılır, eski sayı güncelmiş gibi durmaz.
+
+| Metrik | Anlamı |
+| :--- | :--- |
+| `dashboard_collector_signal_age_seconds` | PLC toplayıcıdan son sinyalden bu yana geçen süre |
+| `dashboard_barcodes_stuck` | 5 dk'dan uzun süredir `NEW`, yani ERP'ye gönderilmeyi bekleyen barkod |
+| `dashboard_line_running{line}` | 1 hat çalışıyor, 0 duruyor/pasif |
+| `dashboard_shift_barcodes{line,status}` | Bu vardiyada okunan barkodlar; `status` = `sent`, `error`, `pending` (panodaki sayılarla aynı) |
+
+Ayrıca JVM, bağlantı havuzu ve HTTP istek metrikleri de yayınlanır. Örnek alarm kuralları:
+
+```yaml
+groups:
+  - name: analysis-dashboard
+    rules:
+      - alert: ToplayiciSustu
+        expr: dashboard_collector_signal_age_seconds > 60
+        for: 1m
+      - alert: ErpGonderimiDurdu
+        expr: dashboard_barcodes_stuck > 0
+        for: 5m
+      - alert: ErpHataOraniYuksek
+        expr: sum(dashboard_shift_barcodes{status="error"}) / sum(dashboard_shift_barcodes) > 0.2
+        for: 15m
+      - alert: HatUzunSureDuruyor
+        expr: dashboard_line_running == 0
+        for: 30m
+```
 
 ### Geliştirme Ortamı Varsayılan Kullanıcıları
 

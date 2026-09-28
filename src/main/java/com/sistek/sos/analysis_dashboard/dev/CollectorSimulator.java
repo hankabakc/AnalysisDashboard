@@ -10,7 +10,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -39,7 +38,6 @@ import java.util.concurrent.TimeUnit;
 @Component
 @Profile("dev")
 @ConditionalOnProperty(name = "dashboard.simulator.enabled", havingValue = "true")
-@EnableScheduling
 public class CollectorSimulator {
 
     private static final Logger log = LoggerFactory.getLogger(CollectorSimulator.class);

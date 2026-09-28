@@ -18,12 +18,18 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.security.authentication.AuthenticationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -36,7 +42,8 @@ import java.net.URI;
 /**
  * Spring Security güvenlik yapılandırması:
  * 1. Zincir (API): /api/** yolları için stateless, JWT tabanlı koruma.
- * 2. Zincir (Web): HTML ekranları için oturum ve form login koruması.
+ * 2. Zincir (Metrik): /actuator/prometheus için stateless, HTTP Basic koruma.
+ * 3. Zincir (Web): HTML ekranları için oturum ve form login koruması.
  *
  * Kullanıcılar tek UserDetailsService bean'inden (AppUserDetailsService) otomatik bağlanır.
  * JWT "roles" iddiası → ROLE_ yetkileri eşlemesi application.properties'tedir.
@@ -104,10 +111,45 @@ public class SecurityConfig {
     }
 
     /**
-     * Web Arayüzü Güvenlik Filtre Zinciri (Stateful, Form Login).
+     * Prometheus kazıma ucu (Stateless, HTTP Basic, ADMIN/APIUSER). İzleme sistemi 15 sn'de bir kazır; bu yüzden bu
+     * zincirin kimlik doğrulayıcısı başarılı girişi yayınlamaz (denetim kaydına LOGIN_SUCCESS yığılmaz, okumalar
+     * kaydedilmez kararı). Başarısız giriş yine LOGIN_FAILURE olarak kaydedilir.
      */
     @Bean
     @Order(2)
+    public SecurityFilterChain metricsSecurityFilterChain(HttpSecurity http, UserDetailsService userDetailsService,
+                                                          AuthenticationEventPublisher eventPublisher) throws Exception {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        ProviderManager authenticationManager = new ProviderManager(provider);
+        authenticationManager.setAuthenticationEventPublisher(new AuthenticationEventPublisher() {
+            @Override
+            public void publishAuthenticationSuccess(Authentication authentication) {
+                // Kazıma okumadır; denetim kaydına yazılmaz
+            }
+
+            @Override
+            public void publishAuthenticationFailure(AuthenticationException exception, Authentication authentication) {
+                eventPublisher.publishAuthenticationFailure(exception, authentication);
+            }
+        });
+
+        http
+            .securityMatcher("/actuator/prometheus")
+            .authenticationManager(authenticationManager)
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth.anyRequest().hasAnyRole("ADMIN", "APIUSER"))
+            .httpBasic(Customizer.withDefaults());
+
+        return http.build();
+    }
+
+    /**
+     * Web Arayüzü Güvenlik Filtre Zinciri (Stateful, Form Login).
+     */
+    @Bean
+    @Order(3)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         AuthenticationEntryPoint loginPage = new LoginUrlAuthenticationEntryPoint("/login");
 
