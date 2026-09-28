@@ -1,8 +1,14 @@
 # Analysis Dashboard
 
-PLC'lerden toplanan verilere dayanarak üretim hatlarının durumunu ve hatlardan geçen ürün sayısını gösteren, fabrika içi kullanım için salt okunur bir web panosu.
+PLC'lerden toplanan verilere dayanarak üretim hatlarının durumunu, hatlardan geçen ürün sayısını ve bu ürünlerin ERP'ye aktarılıp aktarılamadığını gösteren, fabrika içi kullanım için bir web panosu.
 
-Veriyi yazan sistem PLC toplayıcıdır; bu uygulama **yalnızca okur**, hiçbir tabloya yazmaz.
+```
+Bant → barkod okuyucu → PLC → PLC toplayıcı → PostgreSQL → ERP (IFS)
+                                                  ↑
+                                     bu pano veritabanını okur
+```
+
+Veriyi yazan ve ERP'ye gönderen sistem PLC toplayıcıdır; bu uygulama PLC tablolarını **yalnızca okur**. Kendi tablolarına (kullanıcılar, denetim kaydı) yazar. Tek istisna, yalnızca `dev` profilinde ve yerel veritabanına karşı çalışan [sahte toplayıcıdır](#5-geliştirme-veri-simülatörü).
 
 ---
 
@@ -20,9 +26,16 @@ Veriyi yazan sistem PLC toplayıcıdır; bu uygulama **yalnızca okur**, hiçbir
 
 ## Ekranlar
 
-**`/dashboard`** — PLC'nin kimliği ve durumu; altında her üretim hattının kimliği, durumu ve o hattan geçen toplam ürün adedi.
+**`/dashboard`** — Üstte dönem seçimi; altında PLC kartı (kimlik, durum, son sinyal), her hat için kart ve tüm hatların ERP hata dağılımı.
 
-**`/line/{lineId}`** — Seçilen hattan geçen ürünlerin listesi: barkod, zaman ve durum. Sayfalama (50 kayıt), tarihe göre artan/azalan sıralama, barkoda göre arama ve duruma göre (NEW / SENT / ERROR) süzme.
+- **Hat kartı:** seçilen dönemde okunan barkod sayısı ve ERP aktarım durumu (✔ aktarılan · ✖ hatalı · ⏳ bekleyen), son barkod zamanı. Karta tıklayınca hat sayfası aynı dönemle açılır.
+- **ERP hata dağılımı:** aktarılamayan barkodların sebebe göre sayısı — *İş emri bulunamadı* (ORA-20100), *Barkod formatı hatalı* (ORA-20124), *ERP'ye ulaşılamadı* (bağlantı hatası). Sebep `api_result` metninden ayıklanır; ham ERP yanıtı ekrana ve API'ye çıkmaz.
+- **Kaynak sağlığı:** toplayıcıdan 60 sn'dir sinyal gelmiyorsa "PLC toplayıcıdan X süredir veri gelmiyor, durumlar son bilinen değerlerdir" uyarısı; 5 dk'dan uzun süredir `NEW` bekleyen barkod varsa "ERP'ye gönderilmeyi bekliyor" uyarısı.
+- **Dönem:** *Bu vardiya* (varsayılan), *Bugün*, *Tüm zamanlar* veya belirli bir gün + vardiya. Vardiyalar 08–16, 16–00, 00–08; üretim günü 08:00'de başlar (gece saatleri önceki güne aittir). Hazır dönemler göreli çalışır: açık kalan ekran vardiya değişince kendiliğinden kayar.
+
+**`/line/{lineId}`** — Seçilen hattan seçilen dönemde geçen ürünlerin listesi: barkod, zaman, durum (renkli + metinli) ve hata sebebi. Üstte o hattın hata dağılımı; bir satıra tıklamak listeyi o hata türüne süzer. Sayfalama (50 kayıt), tarihe göre sıralama, barkod araması, duruma ve hata sebebine göre süzme. Dönem panodan gelir; arama, sayfalama, tazeleme ve "Panoya Dön" onu korur.
+
+Veritabanındaki saatler **UTC**'dir; ekranda sunucunun saat diliminde gösterilir. Sunucu fabrika saatinde (Europe/Istanbul) çalıştırılmalıdır.
 
 ### Canlı tazeleme
 
@@ -41,6 +54,11 @@ Ayarlar `application.properties` içindedir; aralığı düşürmeden önce ekra
 ```properties
 dashboard.refresh.interval=5s
 dashboard.refresh.stale-after-intervals=3
+# Kaynak sağlığı eşikleri (toplayıcı ~5 sn'de bir sinyal yazar)
+dashboard.source.silent-after=60s
+dashboard.source.stuck-after=5m
+# Vardiya başlangıçları (yerel saat, HH:mm); ilki üretim gününün başıdır
+dashboard.shift.starts=08:00,16:00,00:00
 ```
 
 İstemci tarafı `src/main/resources/static/js/refresh.js`, sunucu tarafı `config/RefreshSettings.java` ve `templates/fragments/` altındadır.
@@ -59,11 +77,11 @@ Uygulama, veritabanındaki 5 tabloyu dışarıya sunan 8 adet salt okunur JSON R
 
 | Uç | Yöntem | Açıklama | Yanıt |
 | :--- | :--- | :--- | :--- |
-| `/api/plc` | GET | Tanımlı tüm PLC listesi | `List<PlcSummary>` |
+| `/api/plc` | GET | Tanımlı tüm PLC listesi (durum, son sinyal `lastSignalAt`) | `List<PlcSummary>` |
 | `/api/plc/{id}` | GET | Tek bir PLC bilgisi | `PlcSummary` (404 ProblemDetail) |
 | `/api/plc/{id}/logs` | GET | PLC durum değişiklik geçmişi | `PageResponse<LogEntry>` (200 / 404) |
-| `/api/lines` | GET | Tüm hatlar ve toplam barkod adetleri | `List<LineSummary>` |
-| `/api/lines/{id}` | GET | Tek bir hat bilgisi ve ürün adedi | `LineSummary` (404 ProblemDetail) |
+| `/api/lines` | GET | Tüm hatlar: toplam barkod (`quantity`), ERP'ye aktarılan (`sent`), hatalı (`error`), bekleyen (`pending`), son barkod (`lastBarcodeAt`) | `List<LineSummary>` |
+| `/api/lines/{id}` | GET | Tek bir hat bilgisi ve adetleri | `LineSummary` (404 ProblemDetail) |
 | `/api/lines/{id}/barcodes` | GET | Hatta ait barkod listesi | `PageResponse<BarcodeRow>` (404 ProblemDetail) |
 | `/api/lines/{id}/logs` | GET | Hat durum değişiklik geçmişi | `PageResponse<LogEntry>` (200 / 404) |
 | `/api/barcodes` | GET | Genel barkod arama ve sayfalama | `PageResponse<BarcodeRow>` |
@@ -77,7 +95,10 @@ Uygulama, veritabanındaki 5 tabloyu dışarıya sunan 8 adet salt okunur JSON R
 | `sort` | String | `desc` | Sıralama yönü (`asc` veya `desc`) |
 | `barcodeQuery` | String | — | Barkod metni arama filtresi (büyük/küçük harf duyarsız) |
 | `status` | String | — | Durum filtresi (Barkod için `NEW`, `SENT`, `ERROR`) |
+| `errorCode` | String | — | ERP hata kodu filtresi (`ORA-20100`, `ORA-20124`, `CONNECTION`); barkod satırında `error` alanı hata sebebinin etiketidir |
 | `lineId` | String | — | `/api/barcodes` için hat filtresi |
+
+API her zaman **tüm zamanları** döndürür (panodaki dönem seçimi API'ye uygulanmaz). Zaman alanları ofsetsiz **UTC**'dir.
 
 ---
 
@@ -189,13 +210,27 @@ Uygulama bir kez açılıp tablolar oluştuktan sonra örnek veriyi yükle:
 for f in src/test/resources/db/sample-data/*.sql; do docker exec -i gb-postgres psql -U postgres -d postgres < "$f"; done
 ```
 
-### 5. Test
+### 5. Geliştirme veri simülatörü
+
+`dev` profilinde sahte bir PLC toplayıcı (`dev/CollectorSimulator`) çalışır; örnek veri yüklüyse pano canlı veriyle hareket eder:
+
+- 5 sn'de bir PLC sinyali, hatlar ara sıra durup kalkar, çalışan hatlar `SIM…` barkodları okur
+- Barkodlar birkaç saniye sonra "ERP'ye gönderilir": çoğu `SENT`, kalanı gerçekteki üç hata biçimiyle `ERROR`
+- Yalnızca kendi `SIM` barkodlarını işler; elle eklenen `NEW` barkod takılı kalır ("bekliyor" uyarısını görmek için)
+
+Üç kilitle korunur: yalnızca `dev` profili, `dashboard.simulator.enabled=true` (`application-dev.properties`) ve veritabanı adresi **localhost** değilse uygulama açılmaz. Durgun örnek veriye bakmak için ayarı `false` yapın. Sahte barkodları silmek için:
+
+```bash
+docker exec gb-postgres psql -U postgres -d postgres -c "DELETE FROM barcode_data WHERE barcode LIKE 'SIM%'"
+```
+
+### 6. Test
 
 ```bash
 ./mvnw test
 ```
 
-Testler yalnızca **Docker** ister: her koşuda Testcontainers ile geçici bir PostgreSQL açılır, Flyway şemayı, geliştirme kullanıcılarını ve `src/test/resources/db/sample-data` altındaki örnek veriyi yükler (ör. Hat 1 → 1319 barkod). Yerel `gb-postgres` veritabanına dokunulmaz; `DB_PASSWORD` ve `JWT_SECRET` gerekmez.
+Testler yalnızca **Docker** ister: her koşuda Testcontainers ile geçici bir PostgreSQL açılır, Flyway şemayı, geliştirme kullanıcılarını ve `src/test/resources/db/sample-data` altındaki örnek veriyi yükler (ör. Hat 1 → 1319 barkod). Yerel `gb-postgres` veritabanına dokunulmaz; `DB_PASSWORD` ve `JWT_SECRET` gerekmez. Testler sabit bir saatle (2025-07-31T09:43Z) ve `Europe/Istanbul` saat diliminde koşar; sonuç makineden makineye değişmez.
 
 ---
 
@@ -207,7 +242,7 @@ Beş tablo — hepsi PLC toplayıcı sistem tarafından yazılır:
 | :--- | :--- |
 | `plc_info` | PLC kimliği ve durumu (ACTIVE / PASSIVE / NOCOMM) |
 | `line_info` | Hat kimliği, adı ve durumu (RUN / PASSIVE / STOP) |
-| `barcode_data` | Hattan geçen barkodlar, zamanı ve durumu (NEW / SENT / ERROR) |
-| `plc_log`, `line_log` | Durum değişikliği kayıtları |
+| `barcode_data` | Hattan geçen barkodlar, zamanı ve ERP aktarım durumu (NEW → SENT / ERROR); `api_result` ERP'nin yanıtıdır |
+| `plc_log`, `line_log` | Durum değişikliği kayıtları (`plc_log` aynı zamanda ~5 sn'lik kalp atışı) |
 
-Şema yalnızca `src/main/resources/db/migration` altındaki Flyway migrasyonlarıyla değişir; ORM şema üretmez.
+Tüm zaman sütunları saat dilimsiz `timestamp` ve **UTC**'dir. Şema yalnızca `src/main/resources/db/migration` altındaki Flyway migrasyonlarıyla değişir; ORM şema üretmez.
