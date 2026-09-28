@@ -2,6 +2,7 @@ package com.sistek.sos.analysis_dashboard.services;
 
 import com.sistek.sos.analysis_dashboard.dto.Downtime;
 import com.sistek.sos.analysis_dashboard.dto.StatusSegment;
+import com.sistek.sos.analysis_dashboard.services.DowntimeService.Silence;
 import com.sistek.sos.analysis_dashboard.services.DowntimeService.StatusChange;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,15 @@ class DowntimeServiceTest {
     }
 
     private static Downtime analyze(String initialStatus, List<StatusChange> changes, int nowMinute) {
-        return DowntimeService.analyze(initialStatus, changes, FROM, TO, FROM.plusMinutes(nowMinute));
+        return analyze(initialStatus, changes, List.of(), nowMinute);
+    }
+
+    private static Downtime analyze(String initialStatus, List<StatusChange> changes, List<Silence> silences, int nowMinute) {
+        return DowntimeService.analyze(initialStatus, changes, silences, FROM, TO, FROM.plusMinutes(nowMinute));
+    }
+
+    private static Silence silent(int fromMinute, int toMinute) {
+        return new Silence(FROM.plusMinutes(fromMinute), FROM.plusMinutes(toMinute));
     }
 
     @Test
@@ -97,6 +106,34 @@ class DowntimeServiceTest {
         assertEquals(7, downtime.stopCount());
         assertEquals(Duration.ofMinutes(7), downtime.longestStop());
         assertEquals(List.of(7L, 6L, 5L, 4L, 3L), downtime.longestStops().stream().map(s -> s.duration().toMinutes()).toList());
+    }
+
+    @Test
+    @DisplayName("Toplayıcı 10.–20. dk sustu: o aralık 'Veri yok', çalışma sayılmaz")
+    void silenceInTheMiddleIsUnknown() {
+        Downtime downtime = analyze("RUN", List.of(), List.of(silent(10, 20)), 60);
+        assertEquals(List.of("Çalışıyor", "Veri yok", "Çalışıyor"), downtime.segments().stream().map(StatusSegment::label).toList());
+        assertEquals(Duration.ofMinutes(50), downtime.run());
+        assertEquals(100, downtime.availability());
+    }
+
+    @Test
+    @DisplayName("Toplayıcı 30. dk'dan beri susuyor: son durum sürmüş sayılmaz (T-026'daki hata)")
+    void trailingSilenceStopsTheLastStatus() {
+        Downtime downtime = analyze("RUN", List.of(at(20, "STOP"), at(25, "RUN")), List.of(silent(30, 480)), 60);
+        assertEquals(Duration.ofMinutes(25), downtime.run());
+        assertEquals(Duration.ofMinutes(5), downtime.stop());
+        assertEquals("Veri yok", downtime.segments().get(downtime.segments().size() - 1).label());
+        assertEquals(83, downtime.availability());
+    }
+
+    @Test
+    @DisplayName("Kesinti içinde başlayan duruş: kesinti bitince duruş olarak görünür, kesinti kısmı sayılmaz")
+    void stopStartedDuringSilence() {
+        Downtime downtime = analyze("RUN", List.of(at(15, "STOP"), at(25, "RUN")), List.of(silent(10, 20)), 60);
+        assertEquals(List.of("Çalışıyor", "Veri yok", "Duruş", "Çalışıyor"), downtime.segments().stream().map(StatusSegment::label).toList());
+        assertEquals(Duration.ofMinutes(5), downtime.stop());
+        assertEquals(1, downtime.stopCount());
     }
 
     @Test

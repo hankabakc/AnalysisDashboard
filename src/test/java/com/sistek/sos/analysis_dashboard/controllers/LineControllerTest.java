@@ -10,9 +10,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -36,6 +38,10 @@ class LineControllerTest {
 
     @Autowired
     private MockMvc mvc;
+
+    /** @Transactional testlerde yapılan değişiklik test bitince geri alınır; diğer testler örnek veriyi aynen görür. */
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     @DisplayName("GET /line/1: İlk sayfada tam 50 satır, Sayfa 1 / 27 ve toplam 1319 gösterir")
@@ -224,17 +230,19 @@ class LineControllerTest {
     }
 
     @Test
-    @DisplayName("GET /line/1 (bu vardiya): duruş analizi %95, 35 duruş, en uzun 26 sn, 72 çizelge parçası (1 veri yok + 36 + 35), en uzun 5 duruş")
+    @DisplayName("GET /line/1 (bu vardiya): duruş analizi %95, 35 duruş, en uzun 26 sn, 74 çizelge parçası "
+            + "(veri yok + 36 çalışma + 35 duruş + 08:28 toplayıcı kesintisi ikiye böler), en uzun 5 duruş")
     void lineDowntimeAnalysis() throws Exception {
         String section = "//section[@aria-label='Çalışma Durumu']";
         mvc.perform(get("/line/1"))
                 .andExpect(status().isOk())
                 .andExpect(xpath(section + "//dt[normalize-space(.)='Kullanılabilirlik']/following-sibling::dd[1]").string("%95"))
-                .andExpect(xpath(section + "//dt[normalize-space(.)='Çalışma']/following-sibling::dd[1]").string("1 sa 12 dk"))
+                // 08:28:16–08:28:57 arası toplayıcı sustu (41 sn): çalışma sayılmaz
+                .andExpect(xpath(section + "//dt[normalize-space(.)='Çalışma']/following-sibling::dd[1]").string("1 sa 11 dk"))
                 .andExpect(xpath(section + "//dt[normalize-space(.)='Duruş']/following-sibling::dd[1]").string("4 dk 2 sn"))
                 .andExpect(xpath(section + "//dt[normalize-space(.)='Duruş sayısı']/following-sibling::dd[1]").string("35"))
                 .andExpect(xpath(section + "//dt[normalize-space(.)='En uzun duruş']/following-sibling::dd[1]").string("26 sn"))
-                .andExpect(xpath(section + "//div[contains(@class, 'progress-stacked')]/div").nodeCount(72))
+                .andExpect(xpath(section + "//div[contains(@class, 'progress-stacked')]/div").nodeCount(74))
                 .andExpect(xpath(section + "//div[contains(@class, 'progress-stacked')]/div[1]/@title").string(containsString("Veri yok")))
                 .andExpect(xpath(section + "//ol/li").nodeCount(5));
 
@@ -249,6 +257,19 @@ class LineControllerTest {
         mvc.perform(get("/line/1").param("range", "all"))
                 .andExpect(xpath(section).string(containsString("vardiya ya da gün seçildiğinde")))
                 .andExpect(xpath(section + "//div[contains(@class, 'progress-stacked')]").doesNotExist());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Toplayıcı susarsa son durum sürmüş sayılmaz: son kalp atışı 09:29:56Z ise çizelge 60 sn sonra (09:30:56Z) başlayan 'Veri yok' ile biter")
+    void collectorSilenceIsNotCountedAsRunning() throws Exception {
+        jdbc.update("DELETE FROM plc_log WHERE proc_date > '2025-07-31 09:30:00'");
+        String lastSegment = "//section[@aria-label='Çalışma Durumu']//div[contains(@class, 'progress-stacked')]/div[last()]/@title";
+        mvc.perform(get("/line/1"))
+                .andExpect(status().isOk())
+                .andExpect(xpath(lastSegment).string(containsString("Veri yok · "
+                        + DisplayTime.format(LocalDateTime.parse("2025-07-31T09:30:56.874644")) + " – "
+                        + DisplayTime.format(LocalDateTime.parse("2025-07-31T09:43:00")))));
     }
 
     @Test
