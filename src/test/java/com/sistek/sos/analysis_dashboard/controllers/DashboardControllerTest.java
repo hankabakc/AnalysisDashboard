@@ -75,8 +75,9 @@ class DashboardControllerTest {
                 .andExpect(xpath(BREAKDOWN +"//li[contains(., 'İş emri bulunamadı')]/span[contains(@class, 'badge')]").string("2505"))
                 .andExpect(xpath(BREAKDOWN +"//li[contains(., 'Barkod formatı hatalı')]/span[contains(@class, 'badge')]").string("961"))
                 .andExpect(xpath(BREAKDOWN +"//li[contains(., 'ulaşılamadı')]/span[contains(@class, 'badge')]").string("200"))
-                // Tüm hatların özetinde süzülecek tek hat yok; satırlar bağlantı değildir
-                .andExpect(xpath(BREAKDOWN +"//a").doesNotExist());
+                // Tüm hatların özeti: her satır tüm hatlarda barkod sorgulamayı o hata türüyle açar (T-032)
+                .andExpect(xpath(BREAKDOWN + "//a").nodeCount(3))
+                .andExpect(xpath(BREAKDOWN + "//a[.='İş emri bulunamadı']/@href").string(containsString("/barcodes?status=ERROR&errorCode=ORA-20100")));
     }
 
     @Test

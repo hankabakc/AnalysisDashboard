@@ -33,7 +33,7 @@ Veriyi yazan ve ERP'ye gönderen sistem PLC toplayıcıdır; bu uygulama PLC tab
 **`/dashboard`** — Üstte dönem seçimi; altında PLC kartı (kimlik, durum, son sinyal), her hat için kart ve tüm hatların ERP hata dağılımı.
 
 - **Hat kartı:** seçilen dönemde okunan barkod sayısı ve ERP aktarım durumu (✔ aktarılan · ✖ hatalı · ⏳ bekleyen), çalışma oranı ve duruş sayısı (⏱ Çalışma %95 · 35 duruş), son barkod zamanı. Karta tıklayınca hat sayfası aynı dönemle açılır.
-- **ERP hata dağılımı:** aktarılamayan barkodların sebebe göre sayısı — *İş emri bulunamadı* (ORA-20100), *Barkod formatı hatalı* (ORA-20124), *ERP'ye ulaşılamadı* (bağlantı hatası). Sebep `api_result` metninden ayıklanır; ham ERP yanıtı ekrana ve API'ye çıkmaz.
+- **ERP hata dağılımı:** aktarılamayan barkodların sebebe göre sayısı — *İş emri bulunamadı* (ORA-20100), *Barkod formatı hatalı* (ORA-20124), *ERP'ye ulaşılamadı* (bağlantı hatası). Sebep `api_result` metninden ayıklanır; ham ERP yanıtı ekrana ve API'ye çıkmaz. Bir satıra tıklamak o hata türündeki barkodları tüm hatlarda aynı dönemle listeler (`/barcodes`).
 - **Kaynak sağlığı:** toplayıcıdan 60 sn'dir sinyal gelmiyorsa "PLC toplayıcıdan X süredir veri gelmiyor, durumlar son bilinen değerlerdir" uyarısı; 5 dk'dan uzun süredir `NEW` bekleyen barkod varsa "ERP'ye gönderilmeyi bekliyor" uyarısı.
 - **Dönem:** *Bu vardiya* (varsayılan), *Bugün*, *Tüm zamanlar* veya belirli bir gün + vardiya. Vardiyalar 08–16, 16–00, 00–08; üretim günü 08:00'de başlar (gece saatleri önceki güne aittir). Hazır dönemler göreli çalışır: açık kalan ekran vardiya değişince kendiliğinden kayar.
 
@@ -44,6 +44,8 @@ Ardından **saatlik üretim**: seçilen vardiya/günde saat saat okunan barkod s
 Altında seçilen hattan seçilen dönemde geçen ürünlerin listesi: barkod, zaman, durum (renkli + metinli) ve hata sebebi. Üstte o hattın hata dağılımı; bir satıra tıklamak listeyi o hata türüne süzer. Sayfalama (50 kayıt), tarihe göre sıralama, barkod araması, duruma ve hata sebebine göre süzme. Dönem panodan gelir; arama, sayfalama, tazeleme ve "Panoya Dön" onu korur.
 
 **CSV indir** (`/line/{lineId}/barcodes.csv`): listenin tamamı aynı filtre ve dönemle, Türkçe Excel'in doğrudan açtığı biçimde (UTF-8 + BOM, `;` ayraç). Yalnızca vardiya ya da gün için (tüm zamanlar → 400). Formül ile başlayan hücreler (`=`, `+`, `-`, `@` …) Excel'de çalışmasın diye `'` ile kaçırılır; ham ERP yanıtı dosyaya girmez, yalnızca hata sebebi yazılır.
+
+**`/barcodes`** — **Barkod Sorgulama**: tüm hatlarda barkod arama. "ERP'de bu ürün görünmüyor, nerede?" sorusunun cevabı (hangi hatta, ne zaman okundu, ERP'ye aktarıldı mı, aktarılamadıysa neden) ve planlama birimine verilecek hatalı aktarım listesi. Hat (hepsi / tek hat), barkod metni, durum, hata sebebi ve dönem (hazır dönem ya da gün + vardiya) ile süzülür; tablo ve sayfalama hat sayfasıyla ortaktır, ek olarak hat sütunu hat sayfasına bağlanır. Sorgu ekranıdır, tazelenmez. **CSV indir** (`/barcodes.csv`) hat sayfasındakiyle aynı kurallarla çalışır.
 
 Veritabanındaki saatler **UTC**'dir; ekranda sunucunun saat diliminde gösterilir. Sunucu fabrika saatinde (Europe/Istanbul) çalıştırılmalıdır.
 
@@ -118,7 +120,7 @@ Uygulama, Spring Security ile korunmakta olup rol bazlı erişim denetimi (RBAC)
 
 ### Roller ve Yetki Matrisi
 
-| Rol | Web Arayüzü (`/dashboard`, `/line/**`) | REST API (`/api/**`) | Swagger & Dokümantasyon (`/swagger-ui/**`, `/v3/api-docs/**`) |
+| Rol | Web Arayüzü (`/dashboard`, `/line/**`, `/barcodes`) | REST API (`/api/**`) | Swagger & Dokümantasyon (`/swagger-ui/**`, `/v3/api-docs/**`) |
 | :--- | :--- | :--- | :--- |
 | `ADMIN` | ✅ Açık | ✅ Açık | ✅ Açık |
 | `USER` | ✅ Açık | ❌ Kapalı | ❌ Kapalı |

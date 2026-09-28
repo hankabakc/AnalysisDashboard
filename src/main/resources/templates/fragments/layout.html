@@ -12,15 +12,21 @@
 </head>
 
 <body>
-<nav th:fragment="navbar" class="navbar navbar-expand navbar-dark bg-dark mb-4 shadow-sm">
+<!-- active: bulunulan bolum (dashboard, barcodes, users, audit); o baglanti isaretlenir, hata sayfasinda bos -->
+<nav th:fragment="navbar(active)" class="navbar navbar-expand navbar-dark bg-dark mb-4 shadow-sm">
     <div class="container-fluid px-4">
         <a class="navbar-brand fw-bold" th:href="@{/dashboard}">
             🏭 Analysis Dashboard
         </a>
         <div class="navbar-nav me-auto">
-            <a class="nav-link active" th:href="@{/dashboard}">Üretim Panosu</a>
-            <a class="nav-link" th:href="@{/admin/users}" sec:authorize="hasRole('ADMIN')">Kullanıcılar</a>
-            <a class="nav-link" th:href="@{/admin/audit}" sec:authorize="hasRole('ADMIN')">Denetim Kaydı</a>
+            <a class="nav-link" th:href="@{/dashboard}" th:classappend="${active == 'dashboard'} ? 'active'"
+               th:attr="aria-current=${active == 'dashboard'} ? 'page' : null">Üretim Panosu</a>
+            <a class="nav-link" th:href="@{/barcodes}" th:classappend="${active == 'barcodes'} ? 'active'"
+               th:attr="aria-current=${active == 'barcodes'} ? 'page' : null">Barkod Sorgulama</a>
+            <a class="nav-link" th:href="@{/admin/users}" sec:authorize="hasRole('ADMIN')" th:classappend="${active == 'users'} ? 'active'"
+               th:attr="aria-current=${active == 'users'} ? 'page' : null">Kullanıcılar</a>
+            <a class="nav-link" th:href="@{/admin/audit}" sec:authorize="hasRole('ADMIN')" th:classappend="${active == 'audit'} ? 'active'"
+               th:attr="aria-current=${active == 'audit'} ? 'page' : null">Denetim Kaydı</a>
         </div>
         <div class="d-flex align-items-center" sec:authorize="isAuthenticated()">
             <span class="text-light me-3">

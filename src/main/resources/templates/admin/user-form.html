@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="tr">
 <head th:replace="~{fragments/layout :: head(${isEdit} ? 'Kullanıcıyı Düzenle - Analysis Dashboard' : 'Yeni Kullanıcı Ekle - Analysis Dashboard')}"></head>
 <body class="bg-light">
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<nav th:replace="~{fragments/layout :: navbar('users')}"></nav>
 
 <main class="container py-4" style="max-width: 680px;">
     <!-- Başlık ve Geri Dön Butonu -->

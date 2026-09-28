@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<head th:replace="~{fragments/layout :: head('Barkod Sorgulama - Analysis Dashboard')}"></head>
+<body class="bg-light">
+<nav th:replace="~{fragments/layout :: navbar('barcodes')}"></nav>
+
+<main class="container-fluid px-4 py-3">
+    <div class="mb-3 pb-2 border-bottom">
+        <h1 class="h3 fw-bold mb-1">Barkod Sorgulama</h1>
+        <p class="text-muted mb-0">Tüm hatlarda barkod arayın; ERP'ye aktarılamayan ürünleri hata sebebine göre listeleyin.</p>
+    </div>
+
+    <!-- Tek form: yeni arama ilk sayfadan başlar; sıralama ve sayfa boyutu korunur.
+         Gün seçilirse hazır dönem yok sayılır; geçerli dönem listenin üstünde yazar. -->
+    <div class="card shadow-sm border bg-white mb-4">
+        <div class="card-body p-3">
+            <form method="get" th:action="@{/barcodes}" class="row g-2 align-items-center">
+                <input type="hidden" name="sort" th:value="${pageQuery.sort}" />
+                <input type="hidden" name="size" th:value="${pageQuery.size}" />
+                <th:block th:replace="~{fragments/barcode-list :: filterFields}"></th:block>
+                <div class="col-6 col-md-3 col-xl-2">
+                    <select name="lineId" class="form-select" aria-label="Hat">
+                        <option value="" th:selected="${selectedLine == null}">Hat: Hepsi</option>
+                        <option th:each="id : ${lineIds}" th:value="${id}" th:selected="${selectedLine == id}"
+                                th:text="'Hat ' + ${id}">Hat 1</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-xl-2">
+                    <select name="range" class="form-select" aria-label="Dönem">
+                        <option value="shift" th:selected="${periodFilter.range == 'shift'}">Bu vardiya</option>
+                        <option value="today" th:selected="${periodFilter.range == 'today'}">Bugün</option>
+                        <option value="all" th:selected="${periodFilter.range == 'all'}">Tüm zamanlar</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-xl-2">
+                    <input type="date" name="day" class="form-control" aria-label="Gün (seçilirse dönemin yerine geçer)"
+                           th:value="${periodFilter.day}" />
+                </div>
+                <div class="col-6 col-md-3 col-xl-2">
+                    <select name="shift" class="form-select" aria-label="Vardiya">
+                        <option value="" th:selected="${periodFilter.shift == null}">Tüm gün</option>
+                        <option th:each="s, it : ${shifts}" th:value="${it.count}" th:text="${s}"
+                                th:selected="${periodFilter.shift == it.count}">1. vardiya (08:00–16:00)</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Ara</button>
+                    <a th:href="@{/barcodes}" class="btn btn-outline-secondary">Temizle</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/barcode-list :: barcodeList(listPath='/barcodes', csvPath='/barcodes.csv', showLine=true)}"></div>
+</main>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<!--
+  Barkod listesi: kayit sayisi, CSV baglantisi, tablo ve sayfalayici. Hat sayfasi (/line/{id}) ve tum hatlarda barkod
+  sorgulama (/barcodes) ayni fragment'i kullanir.
+  Parametreler: listPath (siralama ve sayfa baglantilarinin yolu), csvPath (disa aktarim yolu), showLine (Hat sutunu).
+  Model: filter, pageQuery, periodFilter, period, barcodes (Page<BarcodeRow>); selectedLine (secilen hat filtresi,
+  yalnizca /barcodes'ta; hat sayfasinda bos gider ve yok sayilir).
+-->
+<body>
+<div th:fragment="barcodeList(listPath, csvPath, showLine)">
+    <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+        <div class="d-flex align-items-baseline gap-3">
+            <p th:if="${barcodes.totalElements > 0}" class="text-muted mb-0"
+               th:text="${barcodes.totalElements} + ' kayıttan ' + ${barcodes.number * barcodes.size + 1} + '-' + ${barcodes.number * barcodes.size + barcodes.numberOfElements} + ' arası'">
+                1319 kayıttan 1-50 arası
+            </p>
+            <p th:if="${barcodes.totalElements == 0}" class="text-muted mb-0">
+                0 kayıt bulundu
+            </p>
+            <!-- Aynı filtre ve dönemle listenin tamamı; dışa aktarım en fazla bir günlük dönemde (tüm zamanlarda yok) -->
+            <a th:if="${period.fitsInOneDay()}" class="btn btn-sm btn-outline-secondary"
+               th:href="@{${csvPath}(lineId=${selectedLine}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift})}">
+                <span aria-hidden="true">⬇</span> CSV indir
+            </a>
+        </div>
+        <p class="text-muted small mb-0">
+            <span th:text="'Dönem: ' + ${period.label}">Dönem: Bu vardiya: 31.07.2025 · 1. vardiya (08:00–16:00)</span> ·
+            Son güncelleme: <span th:text="${#temporals.format(#temporals.createNow(), 'HH:mm:ss')}">14:03:05</span>
+        </p>
+    </div>
+
+    <!-- Boş Durum: Kayıt Yoksa -->
+    <div th:if="${barcodes.totalElements == 0}" class="alert alert-info shadow-sm" role="status">
+        Filtreye uygun kayıt bulunamadı.
+    </div>
+
+    <!-- Barkod Tablosu ve Sayfalama -->
+    <div th:if="${barcodes.totalElements > 0}" class="card shadow-sm border bg-white mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 align-middle" aria-label="Barkod listesi">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col" class="py-3">BARKOD</th>
+                    <th th:if="${showLine}" scope="col" class="py-3">HAT</th>
+                    <th scope="col" class="py-3">
+                        <a th:href="@{${listPath}(lineId=${selectedLine}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift}, size=${pageQuery.size}, sort=${pageQuery.sort == 'desc' ? 'asc' : 'desc'})}"
+                           class="text-decoration-none text-dark d-inline-flex align-items-center gap-1">
+                            <span>ZAMAN</span>
+                            <span th:text="${pageQuery.sort == 'asc' ? '▲' : '▼'}">▼</span>
+                        </a>
+                    </th>
+                    <th scope="col" class="py-3">DURUM</th>
+                    <th scope="col" class="py-3">HATA SEBEBİ</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${barcodes.content}">
+                    <td class="font-monospace fw-semibold" th:text="${item.barcode}">GU128252503392</td>
+                    <td th:if="${showLine}">
+                        <a th:href="@{/line/{id}(id=${item.lineId}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift})}"
+                           th:text="'Hat ' + ${item.lineId}">Hat 1</a>
+                    </td>
+                    <td th:text="${item.creDateText()}">08.07.2025 14:27:51</td>
+                    <td>
+                        <span class="badge py-1 px-2"
+                              th:classappend="${item.status == 'SENT' ? 'text-bg-success' : (item.status == 'ERROR' ? 'text-bg-danger' : 'text-bg-secondary')}"
+                              th:text="${item.status}">ERROR</span>
+                    </td>
+                    <td th:text="${item.error ?: '—'}">İş emri bulunamadı</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Sayfalayıcı Alt Çubuğu -->
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+            <div>
+                <a th:if="${barcodes.hasPrevious()}"
+                   th:href="@{${listPath}(lineId=${selectedLine}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${barcodes.number - 1})}"
+                   class="btn btn-outline-primary btn-sm">
+                    ‹ Önceki
+                </a>
+                <button th:unless="${barcodes.hasPrevious()}"
+                        class="btn btn-outline-secondary btn-sm" disabled="disabled">
+                    ‹ Önceki
+                </button>
+            </div>
+            <div class="text-muted small">
+                <span th:text="'Sayfa ' + ${barcodes.number + 1} + ' / ' + ${barcodes.totalPages}">Sayfa 1 / 27</span>
+            </div>
+            <div>
+                <a th:if="${barcodes.hasNext()}"
+                   th:href="@{${listPath}(lineId=${selectedLine}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${barcodes.number + 1})}"
+                   class="btn btn-outline-primary btn-sm">
+                    Sonraki ›
+                </a>
+                <button th:unless="${barcodes.hasNext()}"
+                        class="btn btn-outline-secondary btn-sm" disabled="disabled">
+                    Sonraki ›
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--
+  Arama formlarinin ortak alanlari: barkod metni, durum, hata sebebi. Hata sebebi secenekleri o an gercekten gorulen
+  turlerdir (errorCounts). Model: filter, errorCounts.
+-->
+<th:block th:fragment="filterFields">
+    <div class="col-12 col-sm-6 col-md-4 col-xl-3">
+        <input type="text" name="barcodeQuery" class="form-control" placeholder="Barkod ara…"
+               aria-label="Barkod ara" th:value="${filter.barcodeQuery}" />
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+        <select name="status" class="form-select" aria-label="Durum">
+            <option value="" th:selected="${filter.status == null}">Durum: Hepsi</option>
+            <option value="NEW" th:selected="${filter.status == 'NEW'}">NEW</option>
+            <option value="SENT" th:selected="${filter.status == 'SENT'}">SENT</option>
+            <option value="ERROR" th:selected="${filter.status == 'ERROR'}">ERROR</option>
+        </select>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+        <select name="errorCode" class="form-select" aria-label="Hata sebebi">
+            <option value="" th:selected="${filter.errorCode == null}">Hata sebebi: Hepsi</option>
+            <option th:each="e : ${errorCounts}" th:if="${e.code != null}"
+                    th:value="${e.code}" th:selected="${filter.errorCode == e.code}"
+                    th:text="${e.label}">İş emri bulunamadı</option>
+        </select>
+    </div>
+</th:block>
+</body>
+</html>

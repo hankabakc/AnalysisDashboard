@@ -9,6 +9,7 @@ import com.sistek.sos.analysis_dashboard.dto.LineSummary;
 import com.sistek.sos.analysis_dashboard.dto.LogEntry;
 import com.sistek.sos.analysis_dashboard.dto.PageQuery;
 import com.sistek.sos.analysis_dashboard.dto.Period;
+import com.sistek.sos.analysis_dashboard.entities.LineInfo;
 import com.sistek.sos.analysis_dashboard.exceptions.ResourceNotFoundException;
 import com.sistek.sos.analysis_dashboard.repositories.BarcodeRepository;
 import com.sistek.sos.analysis_dashboard.repositories.BarcodeRowProjection;
@@ -16,6 +17,7 @@ import com.sistek.sos.analysis_dashboard.repositories.LikeEscape;
 import com.sistek.sos.analysis_dashboard.repositories.LineInfoRepository;
 import com.sistek.sos.analysis_dashboard.repositories.LineLogRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +47,13 @@ public class LineService {
     /** Tüm hatların özet bilgileri ve seçilen dönemdeki barkod sayıları. */
     public List<LineSummary> findAll(Period period) {
         return lineInfoRepository.findSummaries(period.from(), period.to());
+    }
+
+    /** Hat seçim listesi için tanımlı hatların kimlikleri, sıralı. */
+    public List<String> findLineIds() {
+        return lineInfoRepository.findAll(Sort.by("lineId")).stream()
+                .map(LineInfo::getLineId)
+                .toList();
     }
 
     /** Tek bir hattın tüm zamanlardaki özet bilgisi (API). */

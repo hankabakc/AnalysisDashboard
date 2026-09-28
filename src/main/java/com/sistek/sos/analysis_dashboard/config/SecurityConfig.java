@@ -117,7 +117,7 @@ public class SecurityConfig {
                 // İzleme için açık; ayrıntıları yalnızca ADMIN görür (management.endpoint.health.show-details)
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/admin/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").hasRole("ADMIN")
-                .requestMatchers("/dashboard", "/line/**", "/fragments/**", "/").hasAnyRole("ADMIN", "USER")
+                .requestMatchers("/dashboard", "/line/**", "/barcodes", "/barcodes.csv", "/fragments/**", "/").hasAnyRole("ADMIN", "USER")
                 .anyRequest().authenticated()
             )
             // Oturum yoksa normal istek giriş sayfasına yönlenir. htmx tazeleme isteği (HX-Request) ise 401 alır;

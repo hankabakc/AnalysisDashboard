@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="tr">
 <head th:replace="~{fragments/layout :: head('Hat ' + ${lineId} + ' - Analysis Dashboard')}"></head>
 <body class="bg-light">
-<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<nav th:replace="~{fragments/layout :: navbar('dashboard')}"></nav>
 
 <main class="container-fluid px-4 py-3">
     <!-- Sayfa Başlığı ve Panoya Dönüş Butonu -->
@@ -24,27 +24,7 @@
                 <input type="hidden" name="range" th:value="${periodFilter.range}" />
                 <input type="hidden" name="day" th:value="${periodFilter.day}" />
                 <input type="hidden" name="shift" th:value="${periodFilter.shift}" />
-                <div class="col-12 col-sm-6 col-md-4">
-                    <input type="text" name="barcodeQuery" class="form-control" placeholder="Barkod ara…"
-                           aria-label="Barkod ara" th:value="${filter.barcodeQuery}" />
-                </div>
-                <div class="col-12 col-sm-4 col-md-3">
-                    <select name="status" class="form-select" aria-label="Durum">
-                        <option value="" th:selected="${filter.status == null}">Durum: Hepsi</option>
-                        <option value="NEW" th:selected="${filter.status == 'NEW'}">NEW</option>
-                        <option value="SENT" th:selected="${filter.status == 'SENT'}">SENT</option>
-                        <option value="ERROR" th:selected="${filter.status == 'ERROR'}">ERROR</option>
-                    </select>
-                </div>
-                <!-- Seçenekler bu hatta gerçekten görülen hata türleridir (errorCounts) -->
-                <div class="col-12 col-sm-4 col-md-3">
-                    <select name="errorCode" class="form-select" aria-label="Hata sebebi">
-                        <option value="" th:selected="${filter.errorCode == null}">Hata sebebi: Hepsi</option>
-                        <option th:each="e : ${errorCounts}" th:if="${e.code != null}"
-                                th:value="${e.code}" th:selected="${filter.errorCode == e.code}"
-                                th:text="${e.label}">İş emri bulunamadı</option>
-                    </select>
-                </div>
+                <th:block th:replace="~{fragments/barcode-list :: filterFields}"></th:block>
                 <div class="col-12 col-sm-auto d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Ara</button>
                     <a th:href="@{/line/{id}(id=${lineId}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift})}" class="btn btn-outline-secondary">Temizle</a>
