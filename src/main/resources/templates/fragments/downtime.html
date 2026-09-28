@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="tr">
 <!--
   Hat duruş analizi: seçilen dönemde çalışma/duruş özeti, zaman çizelgesi ve en uzun duruşlar.
-  Hat sayfasının tazelenen alanında çizilir. Model: period, downtimeSupported, downtime (Downtime; kayıt yoksa null).
+  Hat sayfasının tazelenen alanında çizilir. Model: period, downtime (Downtime; kayıt yoksa ya da dönem bir günü aşıyorsa null).
   Çizelge renklidir ama bilgi yalnızca renkte değildir: özet sayılar, lejant ve en uzun duruşlar metin olarak da yazılır;
   her parçanın üzerine gelince durumu, saatleri ve süresi görünür.
 -->
@@ -10,12 +10,12 @@
 <section th:fragment="downtime" class="card shadow-sm border bg-white mb-4" aria-label="Çalışma Durumu">
     <div class="card-header bg-white fw-bold">Çalışma durumu</div>
     <div class="card-body">
-        <p th:unless="${downtimeSupported}" class="text-muted mb-0">
+        <p th:unless="${period.fitsInOneDay()}" class="text-muted mb-0">
             Duruş analizi vardiya ya da gün seçildiğinde yapılır ("Tüm zamanlar" için hesaplanmaz).
         </p>
-        <p th:if="${downtimeSupported and downtime == null}" class="text-muted mb-0">Bu dönem için durum kaydı yok.</p>
+        <p th:if="${period.fitsInOneDay() and downtime == null}" class="text-muted mb-0">Bu dönem için durum kaydı yok.</p>
 
-        <th:block th:if="${downtimeSupported and downtime != null}">
+        <th:block th:if="${downtime != null}">
             <dl class="d-flex flex-wrap column-gap-5 row-gap-2 mb-3">
                 <div>
                     <dt class="small text-muted fw-normal">Kullanılabilirlik</dt>

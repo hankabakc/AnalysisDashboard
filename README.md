@@ -35,6 +35,8 @@ Veriyi yazan ve ERP'ye gönderen sistem PLC toplayıcıdır; bu uygulama PLC tab
 
 **`/line/{lineId}`** — En üstte **çalışma durumu**: kullanılabilirlik (çalışma / (çalışma + duruş); planlı PASİF hariç), çalışma ve duruş süresi, duruş sayısı, en uzun duruş, renkli ve metin etiketli zaman çizelgesi, en uzun 5 duruş. Durum `line_log` değişimlerinden hesaplanır; hattın ilk kaydından önceki ve toplayıcının sustuğu (kalp atışı 60 sn'den uzun kesilen) aralıklar "Veri yok" sayılır, son durum sürmüş kabul edilmez. Analiz vardiya ya da gün için yapılır ("Tüm zamanlar" için hesaplanmaz).
 
+Ardından **saatlik üretim**: seçilen vardiya/günde saat saat okunan barkod sayısı (sunucuda çizilen CSS çubukları, eksen sıfırdan; henüz gelmemiş saatler ayrı gösterilir) ve aynı verinin tablo hâli (saat · okunan · aktarılan · hatalı · bekleyen).
+
 Altında seçilen hattan seçilen dönemde geçen ürünlerin listesi: barkod, zaman, durum (renkli + metinli) ve hata sebebi. Üstte o hattın hata dağılımı; bir satıra tıklamak listeyi o hata türüne süzer. Sayfalama (50 kayıt), tarihe göre sıralama, barkod araması, duruma ve hata sebebine göre süzme. Dönem panodan gelir; arama, sayfalama, tazeleme ve "Panoya Dön" onu korur.
 
 Veritabanındaki saatler **UTC**'dir; ekranda sunucunun saat diliminde gösterilir. Sunucu fabrika saatinde (Europe/Istanbul) çalıştırılmalıdır.

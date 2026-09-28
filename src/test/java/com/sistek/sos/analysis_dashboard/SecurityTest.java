@@ -87,7 +87,7 @@ class SecurityTest {
 
         mvc.perform(get("/line/1"))
                 .andExpect(status().isOk())
-                .andExpect(xpath("//table/tbody/tr").nodeCount(50));
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr").nodeCount(50));
     }
 
     @Test

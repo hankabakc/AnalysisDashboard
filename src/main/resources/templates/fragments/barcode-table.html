@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="tr">
 <!--
-  Hat sayfasinin tazelenen veri alani: calisma durumu (durus analizi), hattin ERP hata dagilimi, kayit sayisi,
+  Hat sayfasinin tazelenen veri alani: calisma durumu (durus analizi), saatlik uretim, hattin ERP hata dagilimi, kayit sayisi,
   barkod tablosu ve sayfalayici.
   Hem /line/{id} sayfasi hem /fragments/line/{id} tazeleme ucu bu fragment'i cizer.
   Model: lineId, filter, pageQuery, periodFilter, period, barcodes (Page<BarcodeRow>), errorCounts,
-  downtimeSupported, downtime.
+  downtime, hourly.
 -->
 <body>
 <div th:fragment="barcodeTable">
     <section th:replace="~{fragments/downtime :: downtime}"></section>
+    <section th:replace="~{fragments/hourly :: hourly}"></section>
     <section th:replace="~{fragments/error-counts :: errorCounts(${lineId})}"></section>
 
     <div class="d-flex justify-content-between align-items-baseline mb-2">
@@ -34,7 +35,7 @@
     <!-- Barkod Tablosu ve Sayfalama -->
     <div th:if="${barcodes.totalElements > 0}" class="card shadow-sm border bg-white mb-4">
         <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0 align-middle">
+            <table class="table table-hover table-striped mb-0 align-middle" aria-label="Barkod listesi">
                 <thead class="table-light">
                 <tr>
                     <th scope="col" class="py-3">BARKOD</th>

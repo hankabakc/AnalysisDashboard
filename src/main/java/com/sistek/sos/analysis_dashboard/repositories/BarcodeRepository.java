@@ -71,6 +71,26 @@ public interface BarcodeRepository extends JpaRepository<BarcodeData, BarcodeId>
                                            @Param("from") LocalDateTime from,
                                            @Param("to") LocalDateTime to);
 
+    /**
+     * Bir hattın [from, to) dönemindeki barkodları, dönem başından itibaren saat saat (0 = ilk saat). Kovalar dönem
+     * başına göre sayılır; dönem yerel saat başında başladığı için kovalar da yerel saat başlarıdır. En fazla 24 satır
+     * (dönem en fazla bir gün). Saati boş geçen kova dönmez.
+     */
+    @Query(value = """
+            SELECT CAST(floor(extract(epoch FROM b.cre_date - CAST(:from AS timestamp)) / 3600) AS integer) AS hourIndex,
+                   count(*) AS total,
+                   count(*) FILTER (WHERE b.status = 'SENT') AS sent,
+                   count(*) FILTER (WHERE b.status = 'ERROR') AS error,
+                   count(*) FILTER (WHERE b.status = 'NEW') AS pending
+            FROM barcode_data b
+            WHERE b.line_id = :lineId AND b.cre_date >= :from AND b.cre_date < :to
+            GROUP BY 1
+            ORDER BY 1
+            """, nativeQuery = true)
+    List<HourlyCountProjection> countByHour(@Param("lineId") String lineId,
+                                            @Param("from") LocalDateTime from,
+                                            @Param("to") LocalDateTime to);
+
     /** Verilen durumda olup verilen UTC zamandan önce oluşmuş barkod sayısı (ör. takılı kalmış NEW'ler). */
     long countByStatusAndCreDateBefore(String status, LocalDateTime before);
 }

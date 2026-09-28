@@ -15,6 +15,7 @@ import java.time.format.DateTimeFormatter;
 public final class DisplayTime {
 
     private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
 
     private DisplayTime() {
     }
@@ -26,6 +27,11 @@ public final class DisplayTime {
 
     public static String format(Instant instant) {
         return instant == null ? "-" : FORMAT.format(instant.atZone(ZoneId.systemDefault()));
+    }
+
+    /** UTC zamanın sunucu saatiyle yalnızca saat:dakika kısmı ("11:00"). */
+    public static String time(LocalDateTime utc) {
+        return TIME.format(utc.toInstant(ZoneOffset.UTC).atZone(ZoneId.systemDefault()));
     }
 
     /** Süreyi en büyük birimle yazar: "12 sn", "5 dk", "3 sa", "2 gün". Negatif süre (saat kayması) 0 sayılır. */

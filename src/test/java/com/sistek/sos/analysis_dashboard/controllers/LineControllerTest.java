@@ -51,9 +51,9 @@ class LineControllerTest {
                 .andExpect(content().string(containsString("Hat 1")))
                 .andExpect(content().string(containsString("1319 kayıttan 1-50 arası")))
                 .andExpect(content().string(containsString("Sayfa 1 / 27")))
-                .andExpect(xpath("//table/tbody/tr").nodeCount(50))
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr").nodeCount(50))
                 // Tarih ham ISO biçiminde (2025-07-08T11:27:51) değil, gg.aa.yyyy SS:dd:ss basılır
-                .andExpect(xpath("//table/tbody/tr[1]/td[2]").string(matchesPattern("\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}:\\d{2}")));
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr[1]/td[2]").string(matchesPattern("\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}:\\d{2}")));
     }
 
     @Test
@@ -85,7 +85,7 @@ class LineControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("172 kayıttan 1-50 arası")))
                 .andExpect(content().string(containsString("Son güncelleme:")))
-                .andExpect(xpath("//table/tbody/tr").nodeCount(50))
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr").nodeCount(50))
                 .andExpect(xpath("//a[contains(text(), 'Sonraki')]/@href").string(containsString("barcodeQuery=GU132")))
                 .andExpect(content().string(not(containsString("<nav"))))
                 .andExpect(content().string(not(containsString("<form"))));
@@ -111,7 +111,7 @@ class LineControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("1319 kayıttan 1301-1319 arası")))
                 .andExpect(content().string(containsString("Sayfa 27 / 27")))
-                .andExpect(xpath("//table/tbody/tr").nodeCount(19));
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr").nodeCount(19));
     }
 
     @Test
@@ -121,7 +121,7 @@ class LineControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("172 kayıttan 1-50 arası")))
                 .andExpect(content().string(containsString("Sayfa 1 / 4")))
-                .andExpect(xpath("//table/tbody/tr").nodeCount(50));
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr").nodeCount(50));
     }
 
     @Test
@@ -130,7 +130,7 @@ class LineControllerTest {
         mvc.perform(get("/line/5").param("range", "all").param("barcodeQuery", "GU128"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("2 kayıttan 1-2 arası")))
-                .andExpect(xpath("//table/tbody/tr").nodeCount(2));
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr").nodeCount(2));
     }
 
     @Test
@@ -140,14 +140,14 @@ class LineControllerTest {
         mvc.perform(get("/line/1").param("range", "all").param("status", "ERROR"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("1319 kayıttan 1-50 arası")))
-                .andExpect(xpath("//table/tbody/tr").nodeCount(50));
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr").nodeCount(50));
 
         // SENT filtresi (veritabanında SENT yok -> 0 kayıt ve boş durum mesajı)
         mvc.perform(get("/line/1").param("range", "all").param("status", "SENT"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("0 kayıt bulundu")))
                 .andExpect(content().string(containsString("Filtreye uygun kayıt bulunamadı.")))
-                .andExpect(xpath("//table").doesNotExist());
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']").doesNotExist());
     }
 
     @Test
@@ -155,8 +155,8 @@ class LineControllerTest {
     void barcodeTimeIsShownInServerZone() throws Exception {
         mvc.perform(get("/line/1"))
                 .andExpect(status().isOk())
-                .andExpect(xpath("//table/tbody/tr[1]/td[1]").string("GU141252500554"))
-                .andExpect(xpath("//table/tbody/tr[1]/td[2]").string(
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr[1]/td[1]").string("GU141252500554"))
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr[1]/td[2]").string(
                         DisplayTime.format(LocalDateTime.parse("2025-07-31T09:42:46.956361"))));
     }
 
@@ -182,9 +182,9 @@ class LineControllerTest {
     void errorColumnShowsLabelNotRawApiResult() throws Exception {
         mvc.perform(get("/line/1").param("range", "all").param("errorCode", "CONNECTION"))
                 .andExpect(status().isOk())
-                .andExpect(xpath("//table/thead/tr/th[4]").string(containsString("HATA SEBEBİ")))
-                .andExpect(xpath("//table/tbody/tr[1]/td[4]").string("ERP'ye ulaşılamadı"))
-                .andExpect(xpath("//table/tbody/tr[1]/td[3]/span[contains(@class, 'text-bg-danger')]").string("ERROR"))
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/thead/tr/th[4]").string(containsString("HATA SEBEBİ")))
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr[1]/td[4]").string("ERP'ye ulaşılamadı"))
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr[1]/td[3]/span[contains(@class, 'text-bg-danger')]").string("ERROR"))
                 .andExpect(content().string(not(containsString("Failed to send"))))
                 .andExpect(content().string(not(containsString("ifsapplications"))))
                 .andExpect(content().string(not(containsString("ErrorText"))));
@@ -221,7 +221,7 @@ class LineControllerTest {
                 .andExpect(content().string(containsString("427 kayıttan 1-50 arası")))
                 .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string(containsString(period)))
                 .andExpect(xpath("//a[contains(text(), 'Sonraki')]/@href").string(containsString(period)))
-                .andExpect(xpath("//table/thead//a/@href").string(containsString(period)))
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/thead//a/@href").string(containsString(period)))
                 .andExpect(xpath("//section[@aria-label='ERP Hata Dağılımı']//a[1]/@href").string(containsString(period)))
                 // Arama formu dönemi gizli alanlarla taşır; "Temizle" ve "Panoya Dön" dönemi bırakmaz
                 .andExpect(xpath("//form//input[@type='hidden'][@name='day']/@value").string("2025-07-28"))
@@ -273,6 +273,30 @@ class LineControllerTest {
     }
 
     @Test
+    @DisplayName("Saatlik üretim: bu vardiyada 8 saat (11:00 → 85, 12:00 → 112, 13:00 sonrası gelmedi); 28.07 tam gün 24 saat; tüm zamanlarda açıklama")
+    void hourlyProduction() throws Exception {
+        String section = "//section[@aria-label='Saatlik Üretim']";
+        String row = section + "//table/tbody/tr[td[1][starts-with(normalize-space(.), '%s')]]/td[2]";
+        mvc.perform(get("/line/1"))
+                .andExpect(status().isOk())
+                .andExpect(xpath(section + "//div[contains(@class, 'card-header')]").string(containsString("(adet)")))
+                .andExpect(xpath(section + "//div[contains(@class, 'card-header')]").string(containsString("Bu vardiya: 31.07.2025")))
+                .andExpect(xpath(section + "//table/tbody/tr").nodeCount(8))
+                .andExpect(xpath(row.formatted("11:00")).string("85"))
+                .andExpect(xpath(row.formatted("12:00")).string("112"))
+                .andExpect(xpath(row.formatted("08:00")).string("0"))
+                .andExpect(xpath(row.formatted("13:00")).string(containsString("henüz gelmedi")));
+
+        mvc.perform(get("/line/4").param("day", "2025-07-28"))
+                .andExpect(xpath(section + "//table/tbody/tr").nodeCount(24))
+                .andExpect(xpath(row.formatted("12:00")).string("124"));
+
+        mvc.perform(get("/line/1").param("range", "all"))
+                .andExpect(xpath(section).string(containsString("vardiya ya da gün seçildiğinde")))
+                .andExpect(xpath(section + "//table").doesNotExist());
+    }
+
+    @Test
     @DisplayName("GET /line/1?day=abc: bozuk tarih 400 döner")
     void invalidDayIsBadRequest() throws Exception {
         mvc.perform(get("/line/1").param("day", "abc").accept(MediaType.TEXT_HTML))
@@ -287,7 +311,7 @@ class LineControllerTest {
                 .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string(containsString("errorCode=ORA-20124")))
                 .andExpect(xpath("//a[contains(text(), 'Önceki')]/@href").string(containsString("errorCode=ORA-20124")))
                 .andExpect(xpath("//a[contains(text(), 'Sonraki')]/@href").string(containsString("errorCode=ORA-20124")))
-                .andExpect(xpath("//table/thead//a/@href").string(containsString("errorCode=ORA-20124")))
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/thead//a/@href").string(containsString("errorCode=ORA-20124")))
                 .andExpect(xpath("//select[@name='errorCode']/option[@selected]/@value").string("ORA-20124"));
     }
 
@@ -319,7 +343,7 @@ class LineControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("1319 kayıttan 1-50 arası")))
                 .andExpect(content().string(containsString("Sayfa 1 / 27")))
-                .andExpect(xpath("//table/tbody/tr").nodeCount(50));
+                .andExpect(xpath("//table[@aria-label='Barkod listesi']/tbody/tr").nodeCount(50));
     }
 
     @Test

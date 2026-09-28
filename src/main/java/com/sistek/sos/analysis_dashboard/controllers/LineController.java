@@ -6,6 +6,7 @@ import com.sistek.sos.analysis_dashboard.dto.PageQuery;
 import com.sistek.sos.analysis_dashboard.dto.Period;
 import com.sistek.sos.analysis_dashboard.dto.PeriodFilter;
 import com.sistek.sos.analysis_dashboard.services.DowntimeService;
+import com.sistek.sos.analysis_dashboard.services.HourlyProductionService;
 import com.sistek.sos.analysis_dashboard.services.LineService;
 import com.sistek.sos.analysis_dashboard.services.PeriodService;
 import org.springframework.stereotype.Controller;
@@ -20,13 +21,15 @@ public class LineController {
     private final LineService lineService;
     private final PeriodService periodService;
     private final DowntimeService downtimeService;
+    private final HourlyProductionService hourlyProductionService;
     private final RefreshSettings refreshSettings;
 
     public LineController(LineService lineService, PeriodService periodService, DowntimeService downtimeService,
-                          RefreshSettings refreshSettings) {
+                          HourlyProductionService hourlyProductionService, RefreshSettings refreshSettings) {
         this.lineService = lineService;
         this.periodService = periodService;
         this.downtimeService = downtimeService;
+        this.hourlyProductionService = hourlyProductionService;
         this.refreshSettings = refreshSettings;
     }
 
@@ -59,7 +62,7 @@ public class LineController {
         model.addAttribute("lineId", lineId);
         model.addAttribute("barcodes", lineService.findLineBarcodes(lineId, filter, period, pageQuery));
         model.addAttribute("errorCounts", lineService.findErrorCounts(lineId, period));
-        model.addAttribute("downtimeSupported", downtimeService.supports(period));
         model.addAttribute("downtime", downtimeService.analyze(period, lineId).get(lineId));
+        model.addAttribute("hourly", hourlyProductionService.find(lineId, period));
     }
 }

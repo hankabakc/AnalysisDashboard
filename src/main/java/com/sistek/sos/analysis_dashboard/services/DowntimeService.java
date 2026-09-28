@@ -35,8 +35,6 @@ public class DowntimeService {
     /** Durumu bilinmeyen süre: hattın ilk kaydından önce ya da toplayıcı sustuğunda. */
     static final String UNKNOWN = "UNKNOWN";
 
-    /** Analiz vardiya ya da gün için yapılır; "tüm zamanlar" bütün log tablosunu çekmek, yani sınırsız sorgu olurdu. */
-    private static final Duration MAX_PERIOD = Duration.ofDays(1);
     private static final int LONGEST_STOPS = 5;
 
     /** line_log'daki bir durum değişimi. */
@@ -63,16 +61,12 @@ public class DowntimeService {
         this.clock = clock;
     }
 
-    public boolean supports(Period period) {
-        return Duration.between(period.from(), period.to()).compareTo(MAX_PERIOD) <= 0;
-    }
-
     /**
-     * Hat kimliği → analiz. lineId null ise tüm hatlar. Dönem desteklenmiyorsa boş döner;
+     * Hat kimliği → analiz. lineId null ise tüm hatlar. Dönem bir günü aşıyorsa ("tüm zamanlar") boş döner;
      * hiç durum kaydı olmayan hat haritada yer almaz.
      */
     public Map<String, Downtime> analyze(Period period, String lineId) {
-        if (!supports(period)) {
+        if (!period.fitsInOneDay()) {
             return Map.of();
         }
         Map<String, String> initialStatus = lineLogRepository.findLastStatusBefore(period.from(), lineId).stream()

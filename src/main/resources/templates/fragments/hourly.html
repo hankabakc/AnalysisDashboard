@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<!--
+  Saatlik üretim grafiği (hat sayfası, tazelenen alan). Model: period, hourly (HourlyProduction; dönem bir günü aşıyorsa null).
+  Sunucuda çizilen CSS çubukları: JavaScript yok, tazelemede biriken grafik örneği yok (WEB-05 §3.4).
+  Eksen sıfırdan başlar; birim ve dönem başlıkta (§3.2). Aynı veri "Tablo olarak göster" altında tablo olarak da vardır (§3.3);
+  çubuk çizimi ekran okuyuculardan gizlenir, tablo okunur.
+-->
+<body>
+<section th:fragment="hourly" class="card shadow-sm border bg-white mb-4" aria-label="Saatlik Üretim">
+    <div class="card-header bg-white fw-bold" th:text="'Saatlik okunan barkod (adet) — ' + ${period.label}">
+        Saatlik okunan barkod (adet) — Bu vardiya: 31.07.2025 · 1. vardiya (08:00–16:00)
+    </div>
+    <div class="card-body">
+        <p th:if="${hourly == null}" class="text-muted mb-0">
+            Saatlik üretim vardiya ya da gün seçildiğinde gösterilir ("Tüm zamanlar" için çizilmez).
+        </p>
+
+        <th:block th:if="${hourly != null}">
+            <div aria-hidden="true">
+                <div class="small text-muted mb-1" th:text="'En yüksek saat: ' + ${hourly.max} + ' adet · eksen 0\'dan başlar'">
+                    En yüksek saat: 112 adet · eksen 0'dan başlar
+                </div>
+                <div class="d-flex align-items-end gap-1 overflow-auto border-bottom pb-1">
+                    <div th:each="hour : ${hourly.hours}" class="flex-fill text-center" style="min-width: 1.75rem;">
+                        <div class="small" th:text="${hour.future} ? '' : ${hour.total}">85</div>
+                        <div class="d-flex align-items-end rounded-top" style="height: 8rem;" th:classappend="${hour.future} ? 'bg-light'">
+                            <div th:unless="${hour.future}" class="w-100 bg-primary rounded-top"
+                                 th:style="|height: ${hour.heightPercent}%;|"></div>
+                        </div>
+                        <div class="small text-muted" th:text="${hour.label()}">11</div>
+                    </div>
+                </div>
+                <p class="small text-muted mt-1 mb-0">Saatler yerel saat başlarıdır · açık gri sütun: henüz gelmedi</p>
+            </div>
+
+            <details class="mt-3">
+                <summary class="small">Tablo olarak göster</summary>
+                <table class="table table-sm small mt-2 mb-0">
+                    <thead>
+                    <tr>
+                        <th scope="col">Saat</th>
+                        <th scope="col" class="text-end">Okunan</th>
+                        <th scope="col" class="text-end">Aktarılan</th>
+                        <th scope="col" class="text-end">Hatalı</th>
+                        <th scope="col" class="text-end">Bekleyen</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="hour : ${hourly.hours}">
+                        <td th:text="${hour.rangeText()}">11:00–12:00</td>
+                        <td th:if="${hour.future}" colspan="4" class="text-muted">henüz gelmedi</td>
+                        <th:block th:unless="${hour.future}">
+                            <td class="text-end" th:text="${hour.total}">85</td>
+                            <td class="text-end" th:text="${hour.sent}">0</td>
+                            <td class="text-end" th:text="${hour.error}">85</td>
+                            <td class="text-end" th:text="${hour.pending}">0</td>
+                        </th:block>
+                    </tr>
+                    </tbody>
+                </table>
+            </details>
+        </th:block>
+    </div>
+</section>
+</body>
+</html>
