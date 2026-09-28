@@ -1,5 +1,7 @@
 # Analysis Dashboard
 
+[![CI](https://github.com/hankabakc/AnalysisDashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/hankabakc/AnalysisDashboard/actions/workflows/ci.yml)
+
 PLC'lerden toplanan verilere dayanarak üretim hatlarının durumunu, hatlardan geçen ürün sayısını ve bu ürünlerin ERP'ye aktarılıp aktarılamadığını gösteren, fabrika içi kullanım için bir web panosu.
 
 ```
@@ -21,6 +23,8 @@ Veriyi yazan ve ERP'ye gönderen sistem PLC toplayıcıdır; bu uygulama PLC tab
 | Şema yönetimi | Flyway (`ddl-auto=validate`) |
 | Arayüz | Thymeleaf (sunucu render) · Bootstrap 5.3.3 · htmx 2.0.4 (periyodik tazeleme) — WebJars ile yerel, CDN yok |
 | Test | JUnit 5 · MockMvc · Testcontainers (Docker içinde gerçek PostgreSQL) |
+| Dağıtım | Docker (çok aşamalı imaj, root olmayan kullanıcı) · docker compose · GitHub Actions (her push'ta test + imaj derlemesi) |
+| İzleme | Spring Boot Actuator — yalnızca `/actuator/health` |
 
 ---
 
@@ -119,6 +123,14 @@ Uygulama, Spring Security ile korunmakta olup rol bazlı erişim denetimi (RBAC)
 | `ADMIN` | ✅ Açık | ✅ Açık | ✅ Açık |
 | `USER` | ✅ Açık | ❌ Kapalı | ❌ Kapalı |
 | `APIUSER` | ❌ Kapalı | ✅ Açık | ❌ Kapalı |
+
+### Canlı Ortamda İlk Yönetici
+
+Canlı ortamda (profil verilmeden) hiçbir kullanıcı otomatik oluşmaz. İlk girişi mümkün kılmak için: etkin bir ADMIN yoksa ve `DASHBOARD_INITIAL_ADMIN_PASSWORD` ortam değişkeni verilmişse uygulama açılışta `admin` hesabını bu parolayla açar (en az 12 karakter; denetim kaydına `USER_CREATED` yazılır, işlemi yapan boş). Etkin bir ADMIN varsa hiçbir şey yapmaz. Hesap açıldıktan sonra değişkeni kaldırın ve parolayı **Kullanıcılar** ekranından değiştirin.
+
+### Sağlık Ucu
+
+`/actuator/health` BT izleme ve konteyner sağlık kontrolü içindir: herkese açık ama yalnızca `{"status":"UP"}` döner. Veritabanı ve disk ayrıntılarını yalnızca ADMIN oturumu görür. Başka actuator ucu açık değildir.
 
 ### Geliştirme Ortamı Varsayılan Kullanıcıları
 
@@ -230,7 +242,20 @@ for f in src/test/resources/db/sample-data/*.sql; do docker exec -i gb-postgres 
 docker exec gb-postgres psql -U postgres -d postgres -c "DELETE FROM barcode_data WHERE barcode LIKE 'SIM%'"
 ```
 
-### 6. Test
+### 6. Docker ile (tek komut)
+
+```bash
+cp .env.example .env    # DB_PASSWORD, JWT_SECRET ve ilk yönetici parolasını doldurun; .env depoya girmez
+docker compose up -d --build
+```
+
+Uygulama ve bir PostgreSQL birlikte açılır (<http://localhost:8080>); Flyway şemayı kurar, `DASHBOARD_INITIAL_ADMIN_PASSWORD` verildiyse `admin` hesabı açılır. İmaj iki aşamalıdır (JDK'da derlenir, yalnızca JRE ile çalışır), uygulama root olmayan kullanıcıyla ve `TZ=Europe/Istanbul` ile çalışır.
+
+> Compose'daki `db` servisi yalnızca deneme içindir. Fabrikada uygulama PLC toplayıcının veritabanına bağlanır: `SPRING_DATASOURCE_URL` o veritabanını gösterir.
+
+Kapatmak ve verisini silmek için: `docker compose down -v`
+
+### 7. Test
 
 ```bash
 ./mvnw test

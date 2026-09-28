@@ -1,0 +1,13 @@
+# Imaj derlemesine yalnizca pom, Maven wrapper ve src girer; sir (.env), IDE ve planlama dosyalari girmez
+target/
+.git/
+.idea/
+.vscode/
+.claude/
+.env
+.env.*
+KURALLAR/
+PLANLAMA/
+GENELGECER/
+DB/
+*.md

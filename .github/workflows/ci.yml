@@ -1,0 +1,27 @@
+# Her push ve pull request'te: testler (Testcontainers, runner'daki Docker ile gercek PostgreSQL) ve imaj derlemesi.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Testler
+        run: ./mvnw -B verify
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Imaj derlenir (gonderilmez)
+        run: docker build -t analysis-dashboard:ci .

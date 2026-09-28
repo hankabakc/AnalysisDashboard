@@ -97,6 +97,11 @@
 
         <!-- Spring Security ve Thymeleaf Security -->
         <dependency>
+            <!-- Yalnizca /actuator/health acik (BT izleme, konteyner saglik kontrolu); ayrintilar yalnizca ADMIN'e -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>

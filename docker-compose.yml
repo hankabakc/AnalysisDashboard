@@ -1,0 +1,35 @@
+# Tek komutla calistirma (deneme / tanitim):
+#   cp .env.example .env   # degerleri doldurun; .env depoya girmez
+#   docker compose up -d --build
+#
+# "db" servisi yalnizca deneme icindir. Fabrikada uygulama PLC toplayicinin veritabanina baglanir:
+# SPRING_DATASOURCE_URL o veritabanini gosterir, db servisi kullanilmaz.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD .env icinde tanimli olmali}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET .env icinde tanimli olmali}
+      DASHBOARD_INITIAL_ADMIN_PASSWORD: ${DASHBOARD_INITIAL_ADMIN_PASSWORD:-}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  db-data:
