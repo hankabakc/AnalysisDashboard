@@ -28,12 +28,14 @@ Veriyi yazan ve ERP'ye gönderen sistem PLC toplayıcıdır; bu uygulama PLC tab
 
 **`/dashboard`** — Üstte dönem seçimi; altında PLC kartı (kimlik, durum, son sinyal), her hat için kart ve tüm hatların ERP hata dağılımı.
 
-- **Hat kartı:** seçilen dönemde okunan barkod sayısı ve ERP aktarım durumu (✔ aktarılan · ✖ hatalı · ⏳ bekleyen), son barkod zamanı. Karta tıklayınca hat sayfası aynı dönemle açılır.
+- **Hat kartı:** seçilen dönemde okunan barkod sayısı ve ERP aktarım durumu (✔ aktarılan · ✖ hatalı · ⏳ bekleyen), çalışma oranı ve duruş sayısı (⏱ Çalışma %95 · 35 duruş), son barkod zamanı. Karta tıklayınca hat sayfası aynı dönemle açılır.
 - **ERP hata dağılımı:** aktarılamayan barkodların sebebe göre sayısı — *İş emri bulunamadı* (ORA-20100), *Barkod formatı hatalı* (ORA-20124), *ERP'ye ulaşılamadı* (bağlantı hatası). Sebep `api_result` metninden ayıklanır; ham ERP yanıtı ekrana ve API'ye çıkmaz.
 - **Kaynak sağlığı:** toplayıcıdan 60 sn'dir sinyal gelmiyorsa "PLC toplayıcıdan X süredir veri gelmiyor, durumlar son bilinen değerlerdir" uyarısı; 5 dk'dan uzun süredir `NEW` bekleyen barkod varsa "ERP'ye gönderilmeyi bekliyor" uyarısı.
 - **Dönem:** *Bu vardiya* (varsayılan), *Bugün*, *Tüm zamanlar* veya belirli bir gün + vardiya. Vardiyalar 08–16, 16–00, 00–08; üretim günü 08:00'de başlar (gece saatleri önceki güne aittir). Hazır dönemler göreli çalışır: açık kalan ekran vardiya değişince kendiliğinden kayar.
 
-**`/line/{lineId}`** — Seçilen hattan seçilen dönemde geçen ürünlerin listesi: barkod, zaman, durum (renkli + metinli) ve hata sebebi. Üstte o hattın hata dağılımı; bir satıra tıklamak listeyi o hata türüne süzer. Sayfalama (50 kayıt), tarihe göre sıralama, barkod araması, duruma ve hata sebebine göre süzme. Dönem panodan gelir; arama, sayfalama, tazeleme ve "Panoya Dön" onu korur.
+**`/line/{lineId}`** — En üstte **çalışma durumu**: kullanılabilirlik (çalışma / (çalışma + duruş); planlı PASİF hariç), çalışma ve duruş süresi, duruş sayısı, en uzun duruş, renkli ve metin etiketli zaman çizelgesi, en uzun 5 duruş. Durum `line_log` değişimlerinden hesaplanır; hattın ilk kaydından önceki ve toplayıcının sustuğu (kalp atışı 60 sn'den uzun kesilen) aralıklar "Veri yok" sayılır, son durum sürmüş kabul edilmez. Analiz vardiya ya da gün için yapılır ("Tüm zamanlar" için hesaplanmaz).
+
+Altında seçilen hattan seçilen dönemde geçen ürünlerin listesi: barkod, zaman, durum (renkli + metinli) ve hata sebebi. Üstte o hattın hata dağılımı; bir satıra tıklamak listeyi o hata türüne süzer. Sayfalama (50 kayıt), tarihe göre sıralama, barkod araması, duruma ve hata sebebine göre süzme. Dönem panodan gelir; arama, sayfalama, tazeleme ve "Panoya Dön" onu korur.
 
 Veritabanındaki saatler **UTC**'dir; ekranda sunucunun saat diliminde gösterilir. Sunucu fabrika saatinde (Europe/Istanbul) çalıştırılmalıdır.
 
