@@ -10,4 +10,6 @@ public interface BarcodeRowProjection {
     String getLineId();
     LocalDateTime getCreDate();
     String getStatus();
+    /** api_result'tan ayıklanan ERP hata kodu (bkz. BarcodeRepository.ERROR_CODE); ham metin çekilmez. */
+    String getErrorCode();
 }

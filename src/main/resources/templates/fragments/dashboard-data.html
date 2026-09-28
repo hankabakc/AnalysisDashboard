@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="tr">
 <!--
-  Panonun tazelenen veri alani: PLC karti ve hat kartlari.
+  Panonun tazelenen veri alani: PLC karti, hat kartlari (ERP aktarim sayilariyla) ve tum hatlarin ERP hata dagilimi.
   Hem /dashboard sayfasi hem /fragments/dashboard tazeleme ucu bu fragment'i cizer.
-  Model: plc (null olabilir), lines.
+  Model: plc (null olabilir), lines, errorCounts.
 -->
 <body>
 <div th:fragment="dashboardData">
@@ -42,14 +42,24 @@
                             <span class="badge bg-secondary py-1 px-2" th:text="${line.status}">RUN</span>
                         </div>
                         <div class="my-3 py-2 bg-light rounded border">
-                            <div class="text-muted small mb-1">Toplam Üretim</div>
+                            <div class="text-muted small mb-1">Okunan Barkod</div>
                             <div class="display-6 fw-bold text-dark" th:text="${line.quantity}">1319</div>
-                            <small class="text-muted">Adet Barkod</small>
                         </div>
+                        <!-- ERP aktarım durumu: renk yanında simge ve metin de taşır -->
+                        <dl class="row small text-start mb-0">
+                            <dt class="col-8 fw-normal text-success"><span aria-hidden="true">✔</span> Aktarılan</dt>
+                            <dd class="col-4 text-end fw-bold mb-1" th:text="${line.sent}">0</dd>
+                            <dt class="col-8 fw-normal text-danger"><span aria-hidden="true">✖</span> Hatalı</dt>
+                            <dd class="col-4 text-end fw-bold mb-1" th:text="${line.error}">1319</dd>
+                            <dt class="col-8 fw-normal text-secondary"><span aria-hidden="true">⏳</span> Bekleyen</dt>
+                            <dd class="col-4 text-end fw-bold mb-0" th:text="${line.pending}">0</dd>
+                        </dl>
                     </div>
                 </a>
             </div>
         </section>
+
+        <section th:replace="~{fragments/error-counts :: errorCounts(null)}"></section>
     </div>
 </div>
 </body>

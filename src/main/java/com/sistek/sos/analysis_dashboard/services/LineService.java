@@ -2,11 +2,15 @@ package com.sistek.sos.analysis_dashboard.services;
 
 import com.sistek.sos.analysis_dashboard.dto.BarcodeFilter;
 import com.sistek.sos.analysis_dashboard.dto.BarcodeRow;
+import com.sistek.sos.analysis_dashboard.dto.BarcodeStatus;
+import com.sistek.sos.analysis_dashboard.dto.ErpError;
+import com.sistek.sos.analysis_dashboard.dto.ErrorCount;
 import com.sistek.sos.analysis_dashboard.dto.LineSummary;
 import com.sistek.sos.analysis_dashboard.dto.LogEntry;
 import com.sistek.sos.analysis_dashboard.dto.PageQuery;
 import com.sistek.sos.analysis_dashboard.exceptions.ResourceNotFoundException;
 import com.sistek.sos.analysis_dashboard.repositories.BarcodeRepository;
+import com.sistek.sos.analysis_dashboard.repositories.BarcodeRowProjection;
 import com.sistek.sos.analysis_dashboard.repositories.LikeEscape;
 import com.sistek.sos.analysis_dashboard.repositories.LineInfoRepository;
 import com.sistek.sos.analysis_dashboard.repositories.LineLogRepository;
@@ -55,8 +59,16 @@ public class LineService {
 
     /** Genel barkod araması; lineId null ise tüm hatlarda arar. */
     public Page<BarcodeRow> findBarcodes(String lineId, BarcodeFilter filter, PageQuery pageQuery) {
-        return barcodeRepository.search(lineId, LikeEscape.escape(filter.barcodeQuery()), filter.status(), pageQuery.toPageable("cre_date", "barcode"))
-                .map(b -> new BarcodeRow(b.getBarcode(), b.getLineId(), b.getCreDate(), b.getStatus()));
+        return barcodeRepository.search(lineId, LikeEscape.escape(filter.barcodeQuery()), filter.status(), filter.errorCode(),
+                        pageQuery.toPageable("cre_date", "barcode"))
+                .map(b -> new BarcodeRow(b.getBarcode(), b.getLineId(), b.getCreDate(), b.getStatus(), errorLabel(b)));
+    }
+
+    /** ERP'ye aktarılamayan barkodların hata türüne göre dağılımı; lineId null ise tüm hatlar. */
+    public List<ErrorCount> findErrorCounts(String lineId) {
+        return barcodeRepository.countErrors(lineId).stream()
+                .map(e -> new ErrorCount(e.getCode(), ErpError.labelOf(e.getCode()), e.getCount()))
+                .toList();
     }
 
     /** Hattın durum geçmiş loglarını sayfalı döner. */
@@ -64,6 +76,11 @@ public class LineService {
         requireExists(lineId);
         return lineLogRepository.findByIdLineId(lineId, pageQuery.toPageable("procDate", "id.seqNo"))
                 .map(log -> new LogEntry(log.getId().lineId(), log.getId().seqNo(), log.getProcDate(), log.getStatus()));
+    }
+
+    /** Hata sebebi yalnızca ERP'ye aktarılamamış (ERROR) barkodda anlamlıdır. */
+    private static String errorLabel(BarcodeRowProjection b) {
+        return BarcodeStatus.ERROR.name().equals(b.getStatus()) ? ErpError.labelOf(b.getErrorCode()) : null;
     }
 
     private void requireExists(String lineId) {

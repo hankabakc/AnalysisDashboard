@@ -38,6 +38,7 @@ public class DashboardController {
         // Şablon PLC yoksa (null) "Tanımlı PLC bulunamadı" mesajı gösterir
         model.addAttribute("plc", plcService.findFirst().orElse(null));
         model.addAttribute("lines", lineService.findAll());
+        model.addAttribute("errorCounts", lineService.findErrorCounts(null));
     }
 }
 

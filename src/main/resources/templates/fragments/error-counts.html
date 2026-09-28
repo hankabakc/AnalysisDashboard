@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="tr">
+<!--
+  ERP'ye aktarilamayan barkodlarin hata turune gore dagilimi. Pano (tum hatlar) ve hat sayfasi ortak kullanir.
+  Parametre lineId: null ise satirlar duz metindir; doluysa her satir o hattin listesini o hata turuyle suzer.
+  Model: errorCounts (List<ErrorCount>).
+-->
+<body>
+<section th:fragment="errorCounts(lineId)" class="card shadow-sm border bg-white mb-4" aria-label="ERP Hata Dağılımı">
+    <div class="card-header bg-white fw-bold">ERP'ye aktarılamayan barkodlar — hata sebebi</div>
+    <p th:if="${errorCounts.isEmpty()}" class="card-body text-muted mb-0">Hatalı barkod yok.</p>
+    <ul th:unless="${errorCounts.isEmpty()}" class="list-group list-group-flush">
+        <li th:each="e : ${errorCounts}" class="list-group-item d-flex justify-content-between align-items-center">
+            <a th:if="${lineId != null and e.code != null}"
+               th:href="@{/line/{id}(id=${lineId}, status='ERROR', errorCode=${e.code})}"
+               th:text="${e.label}">İş emri bulunamadı</a>
+            <span th:unless="${lineId != null and e.code != null}" th:text="${e.label}">İş emri bulunamadı</span>
+            <span class="badge text-bg-danger rounded-pill" th:text="${e.count}">2505</span>
+        </li>
+    </ul>
+</section>
+</body>
+</html>

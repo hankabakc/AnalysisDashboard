@@ -45,6 +45,7 @@ public class LineController {
     private void addBarcodes(String lineId, BarcodeFilter filter, PageQuery pageQuery, Model model) {
         model.addAttribute("lineId", lineId);
         model.addAttribute("barcodes", lineService.findLineBarcodes(lineId, filter, pageQuery));
+        model.addAttribute("errorCounts", lineService.findErrorCounts(lineId));
     }
 }
 

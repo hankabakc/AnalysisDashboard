@@ -156,6 +156,36 @@ class ApiControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/lines: hat başına ERP aktarım sayıları; Hat 1 sent=0, error=1319, pending=0")
+    void linesCarryErpTransferCounts() throws Exception {
+        mvc.perform(get("/api/lines"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].quantity", is(1319)))
+                .andExpect(jsonPath("$[0].sent", is(0)))
+                .andExpect(jsonPath("$[0].error", is(1319)))
+                .andExpect(jsonPath("$[0].pending", is(0)))
+                .andExpect(jsonPath("$[3].error", is(2325)));
+    }
+
+    @Test
+    @DisplayName("GET /api/lines/1/barcodes?errorCode=CONNECTION: 197 kayıt, etiket 'ERP'ye ulaşılamadı', ham api_result yok")
+    void barcodesFilterByErrorCodeWithoutRawApiResult() throws Exception {
+        mvc.perform(get("/api/lines/1/barcodes").param("errorCode", "CONNECTION").param("size", "200"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(197)))
+                .andExpect(jsonPath("$.content[0].error", is("ERP'ye ulaşılamadı")))
+                // Ham ERP yanıtı (iç sunucu adresi dahil) tarayıcıya/istemciye gitmez
+                .andExpect(content().string(not(containsString("Failed to send"))))
+                .andExpect(content().string(not(containsString("ifsapplications"))));
+
+        mvc.perform(get("/api/lines/1/barcodes").param("errorCode", "ORA-20124"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(949)))
+                .andExpect(jsonPath("$.content[0].error", is("Barkod formatı hatalı")))
+                .andExpect(content().string(not(containsString("ErrorText"))));
+    }
+
+    @Test
     @DisplayName("GET /api/lines/1/barcodes?page=-1&size=9999&sort=xyz: 200 döner, page=0, size=200, sort=desc uygulanır")
     void getLine1BarcodesInvalidParamsTolerated() throws Exception {
         mvc.perform(get("/api/lines/1/barcodes")

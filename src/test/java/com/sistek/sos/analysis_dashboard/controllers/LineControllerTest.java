@@ -142,6 +142,64 @@ class LineControllerTest {
     }
 
     @Test
+    @DisplayName("GET /line/1?errorCode=...: CONNECTION 197, ORA-20124 949, ORA-20100 173; geçersiz kod yok sayılır (1319)")
+    void errorCodeFilterWorks() throws Exception {
+        mvc.perform(get("/line/1").param("errorCode", "CONNECTION"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("197 kayıttan 1-50 arası")));
+        mvc.perform(get("/line/1").param("errorCode", "ORA-20124"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("949 kayıttan 1-50 arası")));
+        mvc.perform(get("/line/1").param("errorCode", "ora-20100"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("173 kayıttan 1-50 arası")));
+        mvc.perform(get("/line/1").param("errorCode", "HACK"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("1319 kayıttan 1-50 arası")));
+    }
+
+    @Test
+    @DisplayName("GET /line/1?errorCode=CONNECTION: 'Hata sebebi' sütunu etiketi basar, ERROR rozeti kırmızı; ham api_result sayfaya girmez")
+    void errorColumnShowsLabelNotRawApiResult() throws Exception {
+        mvc.perform(get("/line/1").param("errorCode", "CONNECTION"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//table/thead/tr/th[4]").string(containsString("HATA SEBEBİ")))
+                .andExpect(xpath("//table/tbody/tr[1]/td[4]").string("ERP'ye ulaşılamadı"))
+                .andExpect(xpath("//table/tbody/tr[1]/td[3]/span[contains(@class, 'text-bg-danger')]").string("ERROR"))
+                .andExpect(content().string(not(containsString("Failed to send"))))
+                .andExpect(content().string(not(containsString("ifsapplications"))))
+                .andExpect(content().string(not(containsString("ErrorText"))));
+    }
+
+    @Test
+    @DisplayName("GET /line/1: hattın hata dağılımı; her satır listeyi status=ERROR ve o hata koduyla süzen bağlantıdır")
+    void lineErrorBreakdownLinksToFilteredList() throws Exception {
+        String breakdown = "//section[@aria-label='ERP Hata Dağılımı']";
+        mvc.perform(get("/line/1"))
+                .andExpect(status().isOk())
+                .andExpect(xpath(breakdown + "//li").nodeCount(3))
+                .andExpect(xpath(breakdown + "//li[contains(., 'Barkod formatı hatalı')]/span[contains(@class, 'badge')]").string("949"))
+                .andExpect(xpath(breakdown + "//li[contains(., 'İş emri bulunamadı')]/span[contains(@class, 'badge')]").string("173"))
+                .andExpect(xpath(breakdown + "//a[contains(., 'İş emri bulunamadı')]/@href").string(containsString("/line/1?")))
+                .andExpect(xpath(breakdown + "//a[contains(., 'İş emri bulunamadı')]/@href").string(containsString("status=ERROR")))
+                .andExpect(xpath(breakdown + "//a[contains(., 'İş emri bulunamadı')]/@href").string(containsString("errorCode=ORA-20100")))
+                // Açılır liste hattaki hata türlerini sunar
+                .andExpect(xpath("//select[@name='errorCode']/option[@value='CONNECTION']").exists());
+    }
+
+    @Test
+    @DisplayName("GET /line/1?errorCode=ORA-20124&page=1: tazeleme, sayfalama ve sıralama bağlantıları errorCode'u korur; seçim listede işaretli")
+    void errorCodeKeptInRefreshPagingAndSortLinks() throws Exception {
+        mvc.perform(get("/line/1").param("errorCode", "ORA-20124").param("page", "1"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string(containsString("errorCode=ORA-20124")))
+                .andExpect(xpath("//a[contains(text(), 'Önceki')]/@href").string(containsString("errorCode=ORA-20124")))
+                .andExpect(xpath("//a[contains(text(), 'Sonraki')]/@href").string(containsString("errorCode=ORA-20124")))
+                .andExpect(xpath("//table/thead//a/@href").string(containsString("errorCode=ORA-20124")))
+                .andExpect(xpath("//select[@name='errorCode']/option[@selected]/@value").string("ORA-20124"));
+    }
+
+    @Test
     @DisplayName("GET /line/1?sort=asc ile ?sort=desc: Farklı ilk barkodu basar")
     void sortDirectionChangesOrder() throws Exception {
         MvcResult resDesc = mvc.perform(get("/line/1").param("sort", "desc"))

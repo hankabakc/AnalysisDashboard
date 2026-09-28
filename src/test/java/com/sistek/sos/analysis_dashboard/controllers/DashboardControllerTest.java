@@ -51,6 +51,24 @@ class DashboardControllerTest {
     }
 
     @Test
+    @DisplayName("GET /fragments/dashboard: hat kartında aktarılan/hatalı/bekleyen, altta tüm hatların ERP hata dağılımı")
+    void dashboardShowsErpTransferCountsAndErrorBreakdown() throws Exception {
+        String line1 = "//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='1']]";
+        String breakdown = "//section[@aria-label='ERP Hata Dağılımı']";
+        mvc.perform(get("/fragments/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(xpath(line1 + "//dt[contains(., 'Aktarılan')]/following-sibling::dd[1]").string("0"))
+                .andExpect(xpath(line1 + "//dt[contains(., 'Hatalı')]/following-sibling::dd[1]").string("1319"))
+                .andExpect(xpath(line1 + "//dt[contains(., 'Bekleyen')]/following-sibling::dd[1]").string("0"))
+                .andExpect(xpath(breakdown + "//li").nodeCount(3))
+                .andExpect(xpath(breakdown + "//li[contains(., 'İş emri bulunamadı')]/span[contains(@class, 'badge')]").string("2505"))
+                .andExpect(xpath(breakdown + "//li[contains(., 'Barkod formatı hatalı')]/span[contains(@class, 'badge')]").string("961"))
+                .andExpect(xpath(breakdown + "//li[contains(., 'ulaşılamadı')]/span[contains(@class, 'badge')]").string("200"))
+                // Tüm hatların özetinde süzülecek tek hat yok; satırlar bağlantı değildir
+                .andExpect(xpath(breakdown + "//a").doesNotExist());
+    }
+
+    @Test
     @DisplayName("GET /dashboard: veri alanı /fragments/dashboard ile tazelenir; aralık 5 sn, bayatlık 15 sn, zaman aşımı 4 sn; uyarı başta gizli")
     void dashboardPageIsWiredForRefresh() throws Exception {
         mvc.perform(get("/dashboard"))

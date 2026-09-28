@@ -32,6 +32,15 @@
                         <option value="ERROR" th:selected="${filter.status == 'ERROR'}">ERROR</option>
                     </select>
                 </div>
+                <!-- Seçenekler bu hatta gerçekten görülen hata türleridir (errorCounts) -->
+                <div class="col-12 col-sm-4 col-md-3">
+                    <select name="errorCode" class="form-select" aria-label="Hata sebebi">
+                        <option value="" th:selected="${filter.errorCode == null}">Hata sebebi: Hepsi</option>
+                        <option th:each="e : ${errorCounts}" th:if="${e.code != null}"
+                                th:value="${e.code}" th:selected="${filter.errorCode == e.code}"
+                                th:text="${e.label}">İş emri bulunamadı</option>
+                    </select>
+                </div>
                 <div class="col-12 col-sm-auto d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Ara</button>
                     <a th:href="@{/line/{id}(id=${lineId})}" class="btn btn-outline-secondary">Temizle</a>
@@ -43,7 +52,7 @@
     <div th:replace="~{fragments/layout :: staleBanner}"></div>
 
     <!-- Tazelenen alan: aynı filtre ve sayfayla /fragments/line/{id} çekilir -->
-    <div th:hx-get="@{/fragments/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${pageQuery.page})}"
+    <div th:hx-get="@{/fragments/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${pageQuery.page})}"
          hx-trigger="refresh" hx-swap="innerHTML" hx-sync="this:drop">
         <div th:replace="~{fragments/barcode-table :: barcodeTable}"></div>
     </div>
