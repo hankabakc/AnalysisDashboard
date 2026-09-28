@@ -13,14 +13,21 @@
     <section th:replace="~{fragments/hourly :: hourly}"></section>
     <section th:replace="~{fragments/error-counts :: errorCounts(${lineId})}"></section>
 
-    <div class="d-flex justify-content-between align-items-baseline mb-2">
-        <p th:if="${barcodes.totalElements > 0}" class="text-muted mb-0"
-           th:text="${barcodes.totalElements} + ' kayıttan ' + ${barcodes.number * barcodes.size + 1} + '-' + ${barcodes.number * barcodes.size + barcodes.numberOfElements} + ' arası'">
-            1319 kayıttan 1-50 arası
-        </p>
-        <p th:if="${barcodes.totalElements == 0}" class="text-muted mb-0">
-            0 kayıt bulundu
-        </p>
+    <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+        <div class="d-flex align-items-baseline gap-3">
+            <p th:if="${barcodes.totalElements > 0}" class="text-muted mb-0"
+               th:text="${barcodes.totalElements} + ' kayıttan ' + ${barcodes.number * barcodes.size + 1} + '-' + ${barcodes.number * barcodes.size + barcodes.numberOfElements} + ' arası'">
+                1319 kayıttan 1-50 arası
+            </p>
+            <p th:if="${barcodes.totalElements == 0}" class="text-muted mb-0">
+                0 kayıt bulundu
+            </p>
+            <!-- Aynı filtre ve dönemle listenin tamamı; dışa aktarım en fazla bir günlük dönemde (tüm zamanlarda yok) -->
+            <a th:if="${period.fitsInOneDay()}" class="btn btn-sm btn-outline-secondary"
+               th:href="@{/line/{id}/barcodes.csv(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift})}">
+                <span aria-hidden="true">⬇</span> CSV indir
+            </a>
+        </div>
         <p class="text-muted small mb-0">
             <span th:text="'Dönem: ' + ${period.label}">Dönem: Bu vardiya: 31.07.2025 · 1. vardiya (08:00–16:00)</span> ·
             Son güncelleme: <span th:text="${#temporals.format(#temporals.createNow(), 'HH:mm:ss')}">14:03:05</span>

@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Hat özetleri, barkodlar ve hat loglarını yöneten iş mantığı servisi.
@@ -62,7 +63,17 @@ public class LineService {
     public Page<BarcodeRow> findBarcodes(String lineId, BarcodeFilter filter, Period period, PageQuery pageQuery) {
         return barcodeRepository.search(lineId, LikeEscape.escape(filter.barcodeQuery()), filter.status(), filter.errorCode(),
                         period.from(), period.to(), pageQuery.toPageable("cre_date", "barcode"))
-                .map(b -> new BarcodeRow(b.getBarcode(), b.getLineId(), b.getCreDate(), b.getStatus(), errorLabel(b)));
+                .map(LineService::toRow);
+    }
+
+    /**
+     * Dışa aktarım: hattın barkodları hat sayfasıyla aynı filtreyle, akış halinde (hepsi belleğe alınmaz).
+     * Çağıran açık bir işlem içinde tüketip kapatmalıdır; hattın varlığını önceden requireExists ile doğrular.
+     */
+    public Stream<BarcodeRow> streamLineBarcodes(String lineId, BarcodeFilter filter, Period period) {
+        return barcodeRepository.streamForExport(lineId, LikeEscape.escape(filter.barcodeQuery()), filter.status(),
+                        filter.errorCode(), period.from(), period.to())
+                .map(LineService::toRow);
     }
 
     /** Seçilen dönemde ERP'ye aktarılamayan barkodların hata türüne göre dağılımı; lineId null ise tüm hatlar. */
@@ -80,11 +91,13 @@ public class LineService {
     }
 
     /** Hata sebebi yalnızca ERP'ye aktarılamamış (ERROR) barkodda anlamlıdır. */
-    private static String errorLabel(BarcodeRowProjection b) {
-        return BarcodeStatus.ERROR.name().equals(b.getStatus()) ? ErpError.labelOf(b.getErrorCode()) : null;
+    private static BarcodeRow toRow(BarcodeRowProjection b) {
+        String error = BarcodeStatus.ERROR.name().equals(b.getStatus()) ? ErpError.labelOf(b.getErrorCode()) : null;
+        return new BarcodeRow(b.getBarcode(), b.getLineId(), b.getCreDate(), b.getStatus(), error);
     }
 
-    private void requireExists(String lineId) {
+    /** Hat yoksa 404. */
+    public void requireExists(String lineId) {
         if (!lineInfoRepository.existsById(lineId)) {
             throw notFound(lineId);
         }

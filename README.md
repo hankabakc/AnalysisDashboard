@@ -39,6 +39,8 @@ Ardından **saatlik üretim**: seçilen vardiya/günde saat saat okunan barkod s
 
 Altında seçilen hattan seçilen dönemde geçen ürünlerin listesi: barkod, zaman, durum (renkli + metinli) ve hata sebebi. Üstte o hattın hata dağılımı; bir satıra tıklamak listeyi o hata türüne süzer. Sayfalama (50 kayıt), tarihe göre sıralama, barkod araması, duruma ve hata sebebine göre süzme. Dönem panodan gelir; arama, sayfalama, tazeleme ve "Panoya Dön" onu korur.
 
+**CSV indir** (`/line/{lineId}/barcodes.csv`): listenin tamamı aynı filtre ve dönemle, Türkçe Excel'in doğrudan açtığı biçimde (UTF-8 + BOM, `;` ayraç). Yalnızca vardiya ya da gün için (tüm zamanlar → 400). Formül ile başlayan hücreler (`=`, `+`, `-`, `@` …) Excel'de çalışmasın diye `'` ile kaçırılır; ham ERP yanıtı dosyaya girmez, yalnızca hata sebebi yazılır.
+
 Veritabanındaki saatler **UTC**'dir; ekranda sunucunun saat diliminde gösterilir. Sunucu fabrika saatinde (Europe/Istanbul) çalıştırılmalıdır.
 
 ### Canlı tazeleme

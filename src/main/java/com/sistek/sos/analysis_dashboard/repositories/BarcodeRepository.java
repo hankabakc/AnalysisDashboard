@@ -4,12 +4,16 @@ import com.sistek.sos.analysis_dashboard.entities.BarcodeData;
 import com.sistek.sos.analysis_dashboard.entities.BarcodeId;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.QueryHint;
+import org.hibernate.jpa.HibernateHints;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * BarcodeData varlığı için veri erişim katmanı.
@@ -52,6 +56,22 @@ public interface BarcodeRepository extends JpaRepository<BarcodeData, BarcodeId>
                                       @Param("from") LocalDateTime from,
                                       @Param("to") LocalDateTime to,
                                       Pageable pageable);
+
+    /**
+     * Dışa aktarım için aramayla aynı filtre, sayfasız ve akış halinde (WEB-05 §4.2): satırlar veritabanından parça parça
+     * okunur, hepsi belleğe alınmaz. Açık bir işlem (transaction) içinde tüketilip kapatılmalıdır. Sıra, hat sayfasının
+     * varsayılanıyla aynı (yeniden eskiye).
+     */
+    @QueryHints(@QueryHint(name = HibernateHints.HINT_FETCH_SIZE, value = "500"))
+    @Query(value = "SELECT b.barcode AS barcode, b.line_id AS lineId, b.cre_date AS creDate, b.status AS status, "
+                   + ERROR_CODE + " AS errorCode " + SEARCH_FILTER + " ORDER BY b.cre_date DESC, b.barcode DESC",
+           nativeQuery = true)
+    Stream<BarcodeRowProjection> streamForExport(@Param("lineId") String lineId,
+                                                 @Param("barcodeQuery") String barcodeQuery,
+                                                 @Param("status") String status,
+                                                 @Param("errorCode") String errorCode,
+                                                 @Param("from") LocalDateTime from,
+                                                 @Param("to") LocalDateTime to);
 
     /**
      * Seçilen dönemdeki hatalı barkodların hata koduna göre adetleri, çoktan aza. lineId null ise tüm hatlar sayılır.

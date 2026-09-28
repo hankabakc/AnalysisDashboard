@@ -16,14 +16,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.xpath;
 
@@ -294,6 +298,59 @@ class LineControllerTest {
         mvc.perform(get("/line/1").param("range", "all"))
                 .andExpect(xpath(section).string(containsString("vardiya ya da gün seçildiğinde")))
                 .andExpect(xpath(section + "//table").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("GET /line/1/barcodes.csv (bu vardiya): text/csv eki, UTF-8 BOM + başlık + 197 satır; filtreler uygulanır; sayfada bağlantı var")
+    void csvExport() throws Exception {
+        String csv = mvc.perform(get("/line/1/barcodes.csv"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", containsString("text/csv")))
+                .andExpect(header().string("Content-Disposition", containsString("attachment")))
+                .andExpect(header().string("Content-Disposition", containsString("hat-1-barkodlar.csv")))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        String[] lines = csv.split("\r\n");
+        assertEquals("﻿Barkod;Hat;Okunma zamanı;Durum;Hata sebebi", lines[0]);
+        assertEquals(1 + 197, lines.length);
+        assertEquals("GU141252500554;1;" + DisplayTime.format(LocalDateTime.parse("2025-07-31T09:42:46.956361"))
+                + ";ERROR;ERP'ye ulaşılamadı", lines[1]);
+        // Ham ERP yanıtı dosyaya da girmez
+        assertFalse(csv.contains("Failed to send"));
+
+        String sentOnly = mvc.perform(get("/line/1/barcodes.csv").param("status", "SENT"))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertEquals(1, sentOnly.split("\r\n").length);
+
+        String errorCode = mvc.perform(get("/line/4/barcodes.csv").param("day", "2025-07-28").param("errorCode", "ORA-20100"))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertEquals(1 + 460, errorCode.split("\r\n").length);
+
+        // Hat sayfasındaki bağlantı geçerli filtreyi ve dönemi taşır
+        mvc.perform(get("/line/4").param("day", "2025-07-28").param("errorCode", "ORA-20100"))
+                .andExpect(xpath("//a[contains(., 'CSV indir')]/@href").string(containsString("/line/4/barcodes.csv?")))
+                .andExpect(xpath("//a[contains(., 'CSV indir')]/@href").string(containsString("errorCode=ORA-20100")))
+                .andExpect(xpath("//a[contains(., 'CSV indir')]/@href").string(containsString("day=2025-07-28")));
+    }
+
+    @Test
+    @DisplayName("CSV sınırları: tüm zamanlar 400 (dönem zorunlu ve sınırlı), olmayan hat 404, tüm zamanlarda sayfada bağlantı yok")
+    void csvExportLimits() throws Exception {
+        mvc.perform(get("/line/1/barcodes.csv").param("range", "all"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/line/999/barcodes.csv"))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/line/1").param("range", "all"))
+                .andExpect(xpath("//a[contains(., 'CSV indir')]").doesNotExist());
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("CSV formül enjeksiyonu: '=1+1' barkodu dosyaya '=1+1 olarak (başında ') yazılır")
+    void csvExportNeutralizesFormulas() throws Exception {
+        jdbc.update("INSERT INTO barcode_data (barcode, line_id, cre_date, status) VALUES ('=1+1', '1', '2025-07-31 09:42:50', 'NEW')");
+        String csv = mvc.perform(get("/line/1/barcodes.csv").param("status", "NEW"))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertEquals("'=1+1;1;" + DisplayTime.format(LocalDateTime.parse("2025-07-31T09:42:50")) + ";NEW;", csv.split("\r\n")[1]);
     }
 
     @Test
