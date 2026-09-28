@@ -1,6 +1,7 @@
 package com.sistek.sos.analysis_dashboard.controllers;
 
 import com.sistek.sos.analysis_dashboard.TestcontainersConfig;
+import com.sistek.sos.analysis_dashboard.dto.DisplayTime;
 import jakarta.servlet.RequestDispatcher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
@@ -139,6 +142,16 @@ class LineControllerTest {
                 .andExpect(content().string(containsString("0 kayıt bulundu")))
                 .andExpect(content().string(containsString("Filtreye uygun kayıt bulunamadı.")))
                 .andExpect(xpath("//table").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("GET /line/1: barkod saati UTC değil sunucu saatiyle basılır (ilk satır 2025-07-31T09:42:46Z)")
+    void barcodeTimeIsShownInServerZone() throws Exception {
+        mvc.perform(get("/line/1"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//table/tbody/tr[1]/td[1]").string("GU141252500554"))
+                .andExpect(xpath("//table/tbody/tr[1]/td[2]").string(
+                        DisplayTime.format(LocalDateTime.parse("2025-07-31T09:42:46.956361"))));
     }
 
     @Test

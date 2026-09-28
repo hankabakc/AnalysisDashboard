@@ -156,6 +156,18 @@ class ApiControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/plc: lastSignalAt (UTC); GET /api/lines: lastBarcodeAt (UTC), barkodu olan her hatta dolu")
+    void plcAndLinesCarryLastTimesInUtc() throws Exception {
+        mvc.perform(get("/api/plc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].lastSignalAt", is("2025-07-31T09:42:56.856763")));
+        mvc.perform(get("/api/lines"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].lastBarcodeAt", is("2025-07-31T09:42:46.956361")))
+                .andExpect(jsonPath("$[4].lastBarcodeAt", is("2025-07-07T16:21:45.022982")));
+    }
+
+    @Test
     @DisplayName("GET /api/lines: hat başına ERP aktarım sayıları; Hat 1 sent=0, error=1319, pending=0")
     void linesCarryErpTransferCounts() throws Exception {
         mvc.perform(get("/api/lines"))

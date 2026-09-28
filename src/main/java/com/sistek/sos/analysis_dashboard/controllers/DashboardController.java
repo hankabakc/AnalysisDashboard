@@ -1,6 +1,7 @@
 package com.sistek.sos.analysis_dashboard.controllers;
 
 import com.sistek.sos.analysis_dashboard.config.RefreshSettings;
+import com.sistek.sos.analysis_dashboard.dto.PlcSummary;
 import com.sistek.sos.analysis_dashboard.services.LineService;
 import com.sistek.sos.analysis_dashboard.services.PlcService;
 import org.springframework.stereotype.Controller;
@@ -35,8 +36,10 @@ public class DashboardController {
     }
 
     private void addDashboardData(Model model) {
-        // Şablon PLC yoksa (null) "Tanımlı PLC bulunamadı" mesajı gösterir
-        model.addAttribute("plc", plcService.findFirst().orElse(null));
+        // Şablon PLC yoksa (null) "Tanımlı PLC bulunamadı" mesajı gösterir; sağlık kontrolü PLC varsa yapılır
+        PlcSummary plc = plcService.findFirst().orElse(null);
+        model.addAttribute("plc", plc);
+        model.addAttribute("health", plc != null ? plcService.checkCollector(plc) : null);
         model.addAttribute("lines", lineService.findAll());
         model.addAttribute("errorCounts", lineService.findErrorCounts(null));
     }

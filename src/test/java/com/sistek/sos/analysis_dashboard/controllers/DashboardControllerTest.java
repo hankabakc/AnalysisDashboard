@@ -1,14 +1,19 @@
 package com.sistek.sos.analysis_dashboard.controllers;
 
 import com.sistek.sos.analysis_dashboard.TestcontainersConfig;
+import com.sistek.sos.analysis_dashboard.dto.DisplayTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -26,8 +31,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithMockUser(roles = "USER")
 class DashboardControllerTest {
 
+    private static final String LINE_1 = "//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='1']]";
+
     @Autowired
     private MockMvc mvc;
+
+    /** @Transactional testlerde yazılan satırlar test bitince geri alınır; diğer testler örnek veriyi aynen görür. */
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     @DisplayName("GET /dashboard: 192.168.1.181, ACTIVE ve 5 hattın adetlerini hat kartı bazında kesin doğrular")
@@ -53,19 +64,57 @@ class DashboardControllerTest {
     @Test
     @DisplayName("GET /fragments/dashboard: hat kartında aktarılan/hatalı/bekleyen, altta tüm hatların ERP hata dağılımı")
     void dashboardShowsErpTransferCountsAndErrorBreakdown() throws Exception {
-        String line1 = "//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='1']]";
         String breakdown = "//section[@aria-label='ERP Hata Dağılımı']";
         mvc.perform(get("/fragments/dashboard"))
                 .andExpect(status().isOk())
-                .andExpect(xpath(line1 + "//dt[contains(., 'Aktarılan')]/following-sibling::dd[1]").string("0"))
-                .andExpect(xpath(line1 + "//dt[contains(., 'Hatalı')]/following-sibling::dd[1]").string("1319"))
-                .andExpect(xpath(line1 + "//dt[contains(., 'Bekleyen')]/following-sibling::dd[1]").string("0"))
+                .andExpect(xpath(LINE_1 +"//dt[contains(., 'Aktarılan')]/following-sibling::dd[1]").string("0"))
+                .andExpect(xpath(LINE_1 +"//dt[contains(., 'Hatalı')]/following-sibling::dd[1]").string("1319"))
+                .andExpect(xpath(LINE_1 +"//dt[contains(., 'Bekleyen')]/following-sibling::dd[1]").string("0"))
                 .andExpect(xpath(breakdown + "//li").nodeCount(3))
                 .andExpect(xpath(breakdown + "//li[contains(., 'İş emri bulunamadı')]/span[contains(@class, 'badge')]").string("2505"))
                 .andExpect(xpath(breakdown + "//li[contains(., 'Barkod formatı hatalı')]/span[contains(@class, 'badge')]").string("961"))
                 .andExpect(xpath(breakdown + "//li[contains(., 'ulaşılamadı')]/span[contains(@class, 'badge')]").string("200"))
                 // Tüm hatların özetinde süzülecek tek hat yok; satırlar bağlantı değildir
                 .andExpect(xpath(breakdown + "//a").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Toplayıcı canlı (son sinyal 3 sn önce): uyarı yok; PLC kartında son sinyal, hat kartında son barkod yerel saatle")
+    void liveCollectorShowsLastSignalWithoutWarning() throws Exception {
+        mvc.perform(get("/fragments/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@role='alert']").doesNotExist())
+                .andExpect(xpath("//section[@aria-label='PLC Bilgisi']").string(containsString(
+                        "Son sinyal: " + DisplayTime.format(LocalDateTime.parse("2025-07-31T09:42:56.856763")) + " (3 sn önce)")))
+                .andExpect(xpath(LINE_1 + "//p[contains(., 'Son barkod')]").string(containsString(
+                        DisplayTime.format(LocalDateTime.parse("2025-07-31T09:42:46.956361")))));
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("Son sinyal 13 dk önce: panoda 'veri gelmiyor' uyarısı süreyi ve durumların son bilinen değer olduğunu yazar")
+    void silentCollectorShowsWarning() throws Exception {
+        jdbc.update("UPDATE plc_info SET last_status_date = '2025-07-31 09:30:00'");
+        mvc.perform(get("/fragments/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@role='alert'][contains(., 'veri gelmiyor')]").string(containsString("13 dk")))
+                .andExpect(xpath("//div[@role='alert'][contains(., 'veri gelmiyor')]").string(containsString("son bilinen")));
+    }
+
+    @Test
+    @Transactional
+    @DisplayName("5 dk'dan uzun süredir NEW bekleyen barkod uyarıda sayılır; 30 sn'lik NEW sayılmaz ama bekleyende görünür")
+    void stuckNewBarcodesAreCounted() throws Exception {
+        jdbc.update("""
+                INSERT INTO barcode_data (barcode, line_id, cre_date, status) VALUES
+                ('TEST-ESKI', '1', '2025-07-31 09:37:00', 'NEW'),
+                ('TEST-YENI', '1', '2025-07-31 09:42:30', 'NEW')
+                """);
+        mvc.perform(get("/fragments/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@role='alert'][contains(., 'gönderilmeyi bekliyor')]").string(containsString("1 barkod")))
+                .andExpect(xpath("//div[@role='alert'][contains(., 'gönderilmeyi bekliyor')]").string(containsString("5 dk")))
+                .andExpect(xpath(LINE_1 + "//dt[contains(., 'Bekleyen')]/following-sibling::dd[1]").string("2"));
     }
 
     @Test

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -62,4 +63,7 @@ public interface BarcodeRepository extends JpaRepository<BarcodeData, BarcodeId>
             """,
            nativeQuery = true)
     List<ErrorCountProjection> countErrors(@Param("lineId") String lineId);
+
+    /** Verilen durumda olup verilen UTC zamandan önce oluşmuş barkod sayısı (ör. takılı kalmış NEW'ler). */
+    long countByStatusAndCreDateBefore(String status, LocalDateTime before);
 }

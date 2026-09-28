@@ -11,8 +11,8 @@ import java.util.Optional;
 
 /**
  * LineInfo varlığı için veri erişim katmanı.
- * Hat özeti ve barkod adetleri (toplam + ERP aktarım durumuna göre) tek sorguda gelir; hat başına ayrı sayım sorgusu yok.
- * Seçilen altı değer, sırasıyla LineSummary(id, status, quantity, sent, error, pending) record'una Spring Data tarafından doldurulur.
+ * Hat özeti, barkod adetleri (toplam + ERP aktarım durumuna göre) ve son barkod zamanı tek sorguda gelir; hat başına ayrı sorgu yok.
+ * Seçilen yedi değer, sırasıyla LineSummary(id, status, quantity, sent, error, pending, lastBarcodeAt) record'una Spring Data tarafından doldurulur.
  */
 public interface LineInfoRepository extends JpaRepository<LineInfo, String> {
 
@@ -20,7 +20,8 @@ public interface LineInfoRepository extends JpaRepository<LineInfo, String> {
             SELECT l.lineId, l.status, count(b.id.barcode),
                    count(CASE WHEN b.status = 'SENT' THEN 1 END),
                    count(CASE WHEN b.status = 'ERROR' THEN 1 END),
-                   count(CASE WHEN b.status = 'NEW' THEN 1 END)
+                   count(CASE WHEN b.status = 'NEW' THEN 1 END),
+                   max(b.creDate)
             FROM LineInfo l LEFT JOIN BarcodeData b ON b.id.lineId = l.lineId
             """;
 

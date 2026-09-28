@@ -2,9 +2,6 @@ package com.sistek.sos.analysis_dashboard.dto;
 
 import com.sistek.sos.analysis_dashboard.entities.AppAuditLog;
 
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-
 /**
  * Denetim kaydı ekran görünüm modeli (Record).
  * JPA Entity'sinin şablona verilmesini engeller (WEB-07 §1.3).
@@ -21,11 +18,8 @@ public record AuditRow(
         String oldValue,
         String newValue
 ) {
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
-            .withZone(ZoneId.systemDefault());
-
     public static AuditRow from(AppAuditLog log) {
-        String formattedDate = log.getOccurredAt() != null ? FORMATTER.format(log.getOccurredAt()) : "-";
+        String formattedDate = DisplayTime.format(log.getOccurredAt());
         String event = log.getEvent() != null ? log.getEvent() : "";
 
         // Tanınmayan değer (elle eklenmiş ya da eski kayıt) ham adıyla basılır

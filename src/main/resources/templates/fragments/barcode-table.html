@@ -48,7 +48,7 @@
                 <tbody>
                 <tr th:each="item : ${barcodes.content}">
                     <td class="font-monospace fw-semibold" th:text="${item.barcode}">GU128252503392</td>
-                    <td th:text="${#temporals.format(item.creDate, 'dd.MM.yyyy HH:mm:ss')}">08.07.2025 11:27:51</td>
+                    <td th:text="${item.creDateText()}">08.07.2025 14:27:51</td>
                     <td>
                         <span class="badge py-1 px-2"
                               th:classappend="${item.status == 'SENT' ? 'text-bg-success' : (item.status == 'ERROR' ? 'text-bg-danger' : 'text-bg-secondary')}"
