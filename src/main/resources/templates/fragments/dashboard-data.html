@@ -47,7 +47,8 @@
 
         <!-- Hat Kartları -->
         <section aria-label="Üretim Hatları">
-            <div class="d-flex flex-row flex-nowrap overflow-auto gap-3 pb-3">
+            <!-- line-cards: TV modunda (css/tv.css) kartlar kaymak yerine ekrana yayılır -->
+            <div class="line-cards d-flex flex-row flex-nowrap overflow-auto gap-3 pb-3">
                 <a th:each="line : ${lines}"
                    th:href="@{/line/{id}(id=${line.id}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift})}"
                    class="card flex-shrink-0 shadow-sm border bg-white text-decoration-none text-reset"

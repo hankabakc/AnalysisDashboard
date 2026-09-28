@@ -64,6 +64,27 @@ class DashboardControllerTest {
     }
 
     @Test
+    @DisplayName("GET /dashboard?tv=true: menü, çıkış ve dönem seçimi yok; TV stili; hat kartları, bayat veri bandı ve tazeleme aynen var")
+    void tvModeHidesChromeAndKeepsLiveData() throws Exception {
+        mvc.perform(get("/dashboard").param("tv", "true"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//nav[contains(@class, 'navbar')]").doesNotExist())
+                .andExpect(content().string(not(containsString("Çıkış Yap"))))
+                .andExpect(xpath("//form[@aria-label='Gün ve vardiya seçimi']").doesNotExist())
+                .andExpect(xpath("//link[@href='/css/tv.css']").exists())
+                .andExpect(xpath("//section[@aria-label='Üretim Hatları']//a[contains(@class, 'card')]").nodeCount(5))
+                .andExpect(xpath("//*[@id='stale-banner']").exists())
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string(containsString("/fragments/dashboard")))
+                .andExpect(xpath("//script[@src='/js/refresh.js']").exists())
+                .andExpect(xpath("//a[contains(., 'TV modundan çık')]/@href").string("/dashboard"));
+
+        mvc.perform(get("/dashboard"))
+                .andExpect(xpath("//nav[contains(@class, 'navbar')]").exists())
+                .andExpect(xpath("//link[@href='/css/tv.css']").doesNotExist())
+                .andExpect(xpath("//a[contains(., 'TV modu')]/@href").string("/dashboard?tv=true"));
+    }
+
+    @Test
     @DisplayName("GET /fragments/dashboard: hat kartında aktarılan/hatalı/bekleyen, altta tüm hatların ERP hata dağılımı")
     void dashboardShowsErpTransferCountsAndErrorBreakdown() throws Exception {
         mvc.perform(get("/fragments/dashboard").param("range", "all"))

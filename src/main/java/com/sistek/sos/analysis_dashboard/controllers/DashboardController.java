@@ -12,6 +12,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class DashboardController {
@@ -31,9 +32,16 @@ public class DashboardController {
         this.refreshSettings = refreshSettings;
     }
 
+    /**
+     * tv=true: sahadaki büyük ekran için kiosk görünümü (menü ve dönem seçimi yok, yazı büyük). Veri alanı ve tazeleme
+     * aynıdır; tazelenen fragment görünümden bağımsız olduğu için tv parametresi tazeleme adresine taşınmaz.
+     */
     @GetMapping("/dashboard")
-    public String dashboardPage(@ModelAttribute("periodFilter") PeriodFilter periodFilter, Model model) {
+    public String dashboardPage(@ModelAttribute("periodFilter") PeriodFilter periodFilter,
+                                @RequestParam(name = "tv", defaultValue = "false") boolean tv,
+                                Model model) {
         addDashboardData(periodFilter, model);
+        model.addAttribute("tv", tv);
         model.addAttribute("shifts", periodService.shiftLabels());
         model.addAttribute("refresh", refreshSettings);
         return "dashboard";

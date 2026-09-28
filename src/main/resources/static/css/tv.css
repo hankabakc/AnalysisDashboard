@@ -1,0 +1,19 @@
+/*
+ * TV (kiosk) modu: panoyu sahadaki büyük ekranda uzaktan okunur gösterir. Yalnızca /dashboard?tv=true yükler.
+ * Bootstrap ölçüleri rem tabanlı olduğu için kök yazı boyutunu büyütmek tüm sayfayı orantılı büyütür.
+ */
+html {
+    font-size: 150%;
+}
+
+/* Hat kartları normalde sabit genişlikte ve yatay kayar; TV'de kaydıran olmadığı için ekrana yayılır, sığmayan alt satıra geçer.
+   !important: kartların genişliği şablonda satır içi stildir. */
+.line-cards {
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+}
+
+.line-cards > .card {
+    flex: 1 1 14rem;
+    width: auto !important;
+}
