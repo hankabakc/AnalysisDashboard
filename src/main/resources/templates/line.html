@@ -8,18 +8,22 @@
     <!-- Sayfa Başlığı ve Panoya Dönüş Butonu -->
     <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
         <h1 class="h3 fw-bold mb-0" th:text="'Hat ' + ${lineId}">Hat 1</h1>
-        <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+        <a th:href="@{/dashboard(range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift})}" class="btn btn-outline-secondary">
             🏭 Panoya Dön
         </a>
     </div>
 
     <!-- Filtreleme Çubuğu: tazelenmez (yazılan arama metni kaybolmasın). Yeni arama ilk sayfadan başlar,
-         sıralama ve sayfa boyutu korunur. -->
+         sıralama, sayfa boyutu ve dönem korunur. -->
     <div class="card shadow-sm border bg-white mb-4">
         <div class="card-body p-3">
             <form method="get" th:action="@{/line/{id}(id=${lineId})}" class="row g-2 align-items-center">
                 <input type="hidden" name="sort" th:value="${pageQuery.sort}" />
                 <input type="hidden" name="size" th:value="${pageQuery.size}" />
+                <!-- Dönem panoda seçilir; arama onu korur -->
+                <input type="hidden" name="range" th:value="${periodFilter.range}" />
+                <input type="hidden" name="day" th:value="${periodFilter.day}" />
+                <input type="hidden" name="shift" th:value="${periodFilter.shift}" />
                 <div class="col-12 col-sm-6 col-md-4">
                     <input type="text" name="barcodeQuery" class="form-control" placeholder="Barkod ara…"
                            aria-label="Barkod ara" th:value="${filter.barcodeQuery}" />
@@ -43,7 +47,7 @@
                 </div>
                 <div class="col-12 col-sm-auto d-flex gap-2">
                     <button type="submit" class="btn btn-primary">Ara</button>
-                    <a th:href="@{/line/{id}(id=${lineId})}" class="btn btn-outline-secondary">Temizle</a>
+                    <a th:href="@{/line/{id}(id=${lineId}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift})}" class="btn btn-outline-secondary">Temizle</a>
                 </div>
             </form>
         </div>
@@ -52,7 +56,7 @@
     <div th:replace="~{fragments/layout :: staleBanner}"></div>
 
     <!-- Tazelenen alan: aynı filtre ve sayfayla /fragments/line/{id} çekilir -->
-    <div th:hx-get="@{/fragments/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${pageQuery.page})}"
+    <div th:hx-get="@{/fragments/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${pageQuery.page})}"
          hx-trigger="refresh" hx-swap="innerHTML" hx-sync="this:drop">
         <div th:replace="~{fragments/barcode-table :: barcodeTable}"></div>
     </div>

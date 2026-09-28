@@ -3,11 +3,13 @@
 <!--
   Panonun tazelenen veri alani: PLC karti, hat kartlari (ERP aktarim sayilariyla) ve tum hatlarin ERP hata dagilimi.
   Hem /dashboard sayfasi hem /fragments/dashboard tazeleme ucu bu fragment'i cizer.
-  Model: plc (null olabilir), health (plc null ise null), lines, errorCounts.
+  Model: periodFilter, period, plc (null olabilir), health (plc null ise null), lines, errorCounts.
+  Sayılar ve hata dağılımı seçilen döneme aittir; "Son barkod" dönemden bağımsızdır.
 -->
 <body>
 <div th:fragment="dashboardData">
     <p class="text-muted small text-end mb-2">
+        <span th:text="'Dönem: ' + ${period.label}">Dönem: Bu vardiya: 31.07.2025 · 1. vardiya (08:00–16:00)</span> ·
         Son güncelleme: <span th:text="${#temporals.format(#temporals.createNow(), 'HH:mm:ss')}">14:03:05</span>
     </p>
 
@@ -47,7 +49,7 @@
         <section aria-label="Üretim Hatları">
             <div class="d-flex flex-row flex-nowrap overflow-auto gap-3 pb-3">
                 <a th:each="line : ${lines}"
-                   th:href="@{/line/{id}(id=${line.id})}"
+                   th:href="@{/line/{id}(id=${line.id}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift})}"
                    class="card flex-shrink-0 shadow-sm border bg-white text-decoration-none text-reset"
                    style="width: 240px; min-width: 220px;">
                     <div class="card-body p-3 text-center d-flex flex-column justify-content-between">

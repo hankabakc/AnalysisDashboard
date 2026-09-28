@@ -5,6 +5,7 @@ import com.sistek.sos.analysis_dashboard.dto.BarcodeRow;
 import com.sistek.sos.analysis_dashboard.dto.LineSummary;
 import com.sistek.sos.analysis_dashboard.dto.LogEntry;
 import com.sistek.sos.analysis_dashboard.dto.PageQuery;
+import com.sistek.sos.analysis_dashboard.dto.Period;
 import com.sistek.sos.analysis_dashboard.dto.api.PageResponse;
 import com.sistek.sos.analysis_dashboard.services.LineService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,7 +34,7 @@ public class LineApiController {
     @Operation(summary = "Tüm hat listesini getirir")
     @GetMapping
     public List<LineSummary> getAllLines() {
-        return lineService.findAll();
+        return lineService.findAll(Period.ALL);
     }
 
     @Operation(summary = "ID ile tek bir hat getirir")
@@ -48,7 +49,7 @@ public class LineApiController {
             @Parameter(description = "Hat ID") @PathVariable("id") String id,
             @ParameterObject BarcodeFilter filter,
             @ParameterObject PageQuery pageQuery) {
-        return PageResponse.from(lineService.findLineBarcodes(id, filter, pageQuery));
+        return PageResponse.from(lineService.findLineBarcodes(id, filter, Period.ALL, pageQuery));
     }
 
     @Operation(summary = "Hat durum loglarını sayfalı olarak getirir")

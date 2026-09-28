@@ -40,7 +40,7 @@ class LineControllerTest {
     @Test
     @DisplayName("GET /line/1: İlk sayfada tam 50 satır, Sayfa 1 / 27 ve toplam 1319 gösterir")
     void firstPageShows50RowsAndPaging() throws Exception {
-        mvc.perform(get("/line/1"))
+        mvc.perform(get("/line/1").param("range", "all"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Hat 1")))
                 .andExpect(content().string(containsString("1319 kayıttan 1-50 arası")))
@@ -75,7 +75,7 @@ class LineControllerTest {
     @Test
     @DisplayName("GET /fragments/line/1?barcodeQuery=GU132: yalnızca sayı + tablo + sayfalayıcı döner; menü ve arama formu yok")
     void barcodeTableFragmentRendersTableOnly() throws Exception {
-        mvc.perform(get("/fragments/line/1").param("barcodeQuery", "GU132"))
+        mvc.perform(get("/fragments/line/1").param("range", "all").param("barcodeQuery", "GU132"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("172 kayıttan 1-50 arası")))
                 .andExpect(content().string(containsString("Son güncelleme:")))
@@ -101,7 +101,7 @@ class LineControllerTest {
     @Test
     @DisplayName("GET /line/1?page=26: Son sayfada tam 19 satır gösterir (1319 - 26*50)")
     void lastPageShowsRemaining19Rows() throws Exception {
-        mvc.perform(get("/line/1").param("page", "26"))
+        mvc.perform(get("/line/1").param("range", "all").param("page", "26"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("1319 kayıttan 1301-1319 arası")))
                 .andExpect(content().string(containsString("Sayfa 27 / 27")))
@@ -111,7 +111,7 @@ class LineControllerTest {
     @Test
     @DisplayName("GET /line/1?barcodeQuery=GU132: Barkod araması ile toplam 172 kayıt bulur")
     void barcodeSearchFinds172OnLine1() throws Exception {
-        mvc.perform(get("/line/1").param("barcodeQuery", "GU132"))
+        mvc.perform(get("/line/1").param("range", "all").param("barcodeQuery", "GU132"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("172 kayıttan 1-50 arası")))
                 .andExpect(content().string(containsString("Sayfa 1 / 4")))
@@ -121,7 +121,7 @@ class LineControllerTest {
     @Test
     @DisplayName("GET /line/5?barcodeQuery=GU128: Hat 5'te arama ile toplam 2 kayıt bulur")
     void barcodeSearchFinds2OnLine5() throws Exception {
-        mvc.perform(get("/line/5").param("barcodeQuery", "GU128"))
+        mvc.perform(get("/line/5").param("range", "all").param("barcodeQuery", "GU128"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("2 kayıttan 1-2 arası")))
                 .andExpect(xpath("//table/tbody/tr").nodeCount(2));
@@ -131,13 +131,13 @@ class LineControllerTest {
     @DisplayName("GET /line/1?status=ERROR: 1319 kayıt; ?status=SENT: 0 kayıt ve boş mesaj basar")
     void statusFilterWorks() throws Exception {
         // ERROR filtresi
-        mvc.perform(get("/line/1").param("status", "ERROR"))
+        mvc.perform(get("/line/1").param("range", "all").param("status", "ERROR"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("1319 kayıttan 1-50 arası")))
                 .andExpect(xpath("//table/tbody/tr").nodeCount(50));
 
         // SENT filtresi (veritabanında SENT yok -> 0 kayıt ve boş durum mesajı)
-        mvc.perform(get("/line/1").param("status", "SENT"))
+        mvc.perform(get("/line/1").param("range", "all").param("status", "SENT"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("0 kayıt bulundu")))
                 .andExpect(content().string(containsString("Filtreye uygun kayıt bulunamadı.")))
@@ -157,16 +157,16 @@ class LineControllerTest {
     @Test
     @DisplayName("GET /line/1?errorCode=...: CONNECTION 197, ORA-20124 949, ORA-20100 173; geçersiz kod yok sayılır (1319)")
     void errorCodeFilterWorks() throws Exception {
-        mvc.perform(get("/line/1").param("errorCode", "CONNECTION"))
+        mvc.perform(get("/line/1").param("range", "all").param("errorCode", "CONNECTION"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("197 kayıttan 1-50 arası")));
-        mvc.perform(get("/line/1").param("errorCode", "ORA-20124"))
+        mvc.perform(get("/line/1").param("range", "all").param("errorCode", "ORA-20124"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("949 kayıttan 1-50 arası")));
-        mvc.perform(get("/line/1").param("errorCode", "ora-20100"))
+        mvc.perform(get("/line/1").param("range", "all").param("errorCode", "ora-20100"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("173 kayıttan 1-50 arası")));
-        mvc.perform(get("/line/1").param("errorCode", "HACK"))
+        mvc.perform(get("/line/1").param("range", "all").param("errorCode", "HACK"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("1319 kayıttan 1-50 arası")));
     }
@@ -174,7 +174,7 @@ class LineControllerTest {
     @Test
     @DisplayName("GET /line/1?errorCode=CONNECTION: 'Hata sebebi' sütunu etiketi basar, ERROR rozeti kırmızı; ham api_result sayfaya girmez")
     void errorColumnShowsLabelNotRawApiResult() throws Exception {
-        mvc.perform(get("/line/1").param("errorCode", "CONNECTION"))
+        mvc.perform(get("/line/1").param("range", "all").param("errorCode", "CONNECTION"))
                 .andExpect(status().isOk())
                 .andExpect(xpath("//table/thead/tr/th[4]").string(containsString("HATA SEBEBİ")))
                 .andExpect(xpath("//table/tbody/tr[1]/td[4]").string("ERP'ye ulaşılamadı"))
@@ -188,7 +188,7 @@ class LineControllerTest {
     @DisplayName("GET /line/1: hattın hata dağılımı; her satır listeyi status=ERROR ve o hata koduyla süzen bağlantıdır")
     void lineErrorBreakdownLinksToFilteredList() throws Exception {
         String breakdown = "//section[@aria-label='ERP Hata Dağılımı']";
-        mvc.perform(get("/line/1"))
+        mvc.perform(get("/line/1").param("range", "all"))
                 .andExpect(status().isOk())
                 .andExpect(xpath(breakdown + "//li").nodeCount(3))
                 .andExpect(xpath(breakdown + "//li[contains(., 'Barkod formatı hatalı')]/span[contains(@class, 'badge')]").string("949"))
@@ -196,14 +196,44 @@ class LineControllerTest {
                 .andExpect(xpath(breakdown + "//a[contains(., 'İş emri bulunamadı')]/@href").string(containsString("/line/1?")))
                 .andExpect(xpath(breakdown + "//a[contains(., 'İş emri bulunamadı')]/@href").string(containsString("status=ERROR")))
                 .andExpect(xpath(breakdown + "//a[contains(., 'İş emri bulunamadı')]/@href").string(containsString("errorCode=ORA-20100")))
+                .andExpect(xpath(breakdown + "//a[contains(., 'İş emri bulunamadı')]/@href").string(containsString("range=all")))
                 // Açılır liste hattaki hata türlerini sunar
                 .andExpect(xpath("//select[@name='errorCode']/option[@value='CONNECTION']").exists());
     }
 
     @Test
+    @DisplayName("GET /line/1: varsayılan dönem bu vardiya (197 kayıt, etiket); /line/4?day=2025-07-28&shift=1 → 427 ve dönem her bağlantıda korunur")
+    void linePageUsesAndKeepsPeriod() throws Exception {
+        mvc.perform(get("/line/1"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("197 kayıttan 1-50 arası")))
+                .andExpect(content().string(containsString("Bu vardiya: 31.07.2025 · 1. vardiya (08:00–16:00)")));
+
+        String period = "range=shift&day=2025-07-28&shift=1";
+        mvc.perform(get("/line/4").param("day", "2025-07-28").param("shift", "1"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("427 kayıttan 1-50 arası")))
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string(containsString(period)))
+                .andExpect(xpath("//a[contains(text(), 'Sonraki')]/@href").string(containsString(period)))
+                .andExpect(xpath("//table/thead//a/@href").string(containsString(period)))
+                .andExpect(xpath("//section[@aria-label='ERP Hata Dağılımı']//a[1]/@href").string(containsString(period)))
+                // Arama formu dönemi gizli alanlarla taşır; "Temizle" ve "Panoya Dön" dönemi bırakmaz
+                .andExpect(xpath("//form//input[@type='hidden'][@name='day']/@value").string("2025-07-28"))
+                .andExpect(xpath("//a[contains(., 'Temizle')]/@href").string(containsString(period)))
+                .andExpect(xpath("//a[contains(., 'Panoya Dön')]/@href").string("/dashboard?" + period));
+    }
+
+    @Test
+    @DisplayName("GET /line/1?day=abc: bozuk tarih 400 döner")
+    void invalidDayIsBadRequest() throws Exception {
+        mvc.perform(get("/line/1").param("day", "abc").accept(MediaType.TEXT_HTML))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("GET /line/1?errorCode=ORA-20124&page=1: tazeleme, sayfalama ve sıralama bağlantıları errorCode'u korur; seçim listede işaretli")
     void errorCodeKeptInRefreshPagingAndSortLinks() throws Exception {
-        mvc.perform(get("/line/1").param("errorCode", "ORA-20124").param("page", "1"))
+        mvc.perform(get("/line/1").param("range", "all").param("errorCode", "ORA-20124").param("page", "1"))
                 .andExpect(status().isOk())
                 .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string(containsString("errorCode=ORA-20124")))
                 .andExpect(xpath("//a[contains(text(), 'Önceki')]/@href").string(containsString("errorCode=ORA-20124")))
@@ -233,7 +263,7 @@ class LineControllerTest {
     @Test
     @DisplayName("GET /line/1?page=-5&sort=xyz&status=HACK: Çökmez, varsayılanlarla 50 satır basar")
     void invalidParamsFallBackToDefaults() throws Exception {
-        mvc.perform(get("/line/1")
+        mvc.perform(get("/line/1").param("range", "all")
                         .param("page", "-5")
                         .param("sort", "xyz")
                         .param("status", "HACK"))
@@ -255,7 +285,7 @@ class LineControllerTest {
     @Test
     @DisplayName("GET /line/1?barcodeQuery=GU132&page=1: Sayfalama bağlantılarında barcodeQuery=GU132 parametresi korunur")
     void pagingLinksKeepFilters() throws Exception {
-        mvc.perform(get("/line/1")
+        mvc.perform(get("/line/1").param("range", "all")
                         .param("barcodeQuery", "GU132")
                         .param("page", "1"))
                 .andExpect(status().isOk())

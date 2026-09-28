@@ -3,7 +3,7 @@
 <!--
   Hat sayfasinin tazelenen veri alani: hattin ERP hata dagilimi, kayit sayisi, barkod tablosu ve sayfalayici.
   Hem /line/{id} sayfasi hem /fragments/line/{id} tazeleme ucu bu fragment'i cizer.
-  Model: lineId, filter, pageQuery, barcodes (Page<BarcodeRow>), errorCounts.
+  Model: lineId, filter, pageQuery, periodFilter, period, barcodes (Page<BarcodeRow>), errorCounts.
 -->
 <body>
 <div th:fragment="barcodeTable">
@@ -18,6 +18,7 @@
             0 kayıt bulundu
         </p>
         <p class="text-muted small mb-0">
+            <span th:text="'Dönem: ' + ${period.label}">Dönem: Bu vardiya: 31.07.2025 · 1. vardiya (08:00–16:00)</span> ·
             Son güncelleme: <span th:text="${#temporals.format(#temporals.createNow(), 'HH:mm:ss')}">14:03:05</span>
         </p>
     </div>
@@ -35,7 +36,7 @@
                 <tr>
                     <th scope="col" class="py-3">BARKOD</th>
                     <th scope="col" class="py-3">
-                        <a th:href="@{/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, size=${pageQuery.size}, sort=${pageQuery.sort == 'desc' ? 'asc' : 'desc'})}"
+                        <a th:href="@{/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift}, size=${pageQuery.size}, sort=${pageQuery.sort == 'desc' ? 'asc' : 'desc'})}"
                            class="text-decoration-none text-dark d-inline-flex align-items-center gap-1">
                             <span>ZAMAN</span>
                             <span th:text="${pageQuery.sort == 'asc' ? '▲' : '▼'}">▼</span>
@@ -63,7 +64,7 @@
         <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
             <div>
                 <a th:if="${barcodes.hasPrevious()}"
-                   th:href="@{/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${barcodes.number - 1})}"
+                   th:href="@{/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${barcodes.number - 1})}"
                    class="btn btn-outline-primary btn-sm">
                     ‹ Önceki
                 </a>
@@ -77,7 +78,7 @@
             </div>
             <div>
                 <a th:if="${barcodes.hasNext()}"
-                   th:href="@{/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${barcodes.number + 1})}"
+                   th:href="@{/line/{id}(id=${lineId}, barcodeQuery=${filter.barcodeQuery}, status=${filter.status}, errorCode=${filter.errorCode}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift}, size=${pageQuery.size}, sort=${pageQuery.sort}, page=${barcodes.number + 1})}"
                    class="btn btn-outline-primary btn-sm">
                     Sonraki ›
                 </a>

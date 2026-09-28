@@ -8,6 +8,7 @@ import com.sistek.sos.analysis_dashboard.dto.ErrorCount;
 import com.sistek.sos.analysis_dashboard.dto.LineSummary;
 import com.sistek.sos.analysis_dashboard.dto.LogEntry;
 import com.sistek.sos.analysis_dashboard.dto.PageQuery;
+import com.sistek.sos.analysis_dashboard.dto.Period;
 import com.sistek.sos.analysis_dashboard.exceptions.ResourceNotFoundException;
 import com.sistek.sos.analysis_dashboard.repositories.BarcodeRepository;
 import com.sistek.sos.analysis_dashboard.repositories.BarcodeRowProjection;
@@ -40,33 +41,33 @@ public class LineService {
         this.lineLogRepository = lineLogRepository;
     }
 
-    /** Tüm hatların özet bilgilerini ve toplam barkod sayılarını döner. */
-    public List<LineSummary> findAll() {
-        return lineInfoRepository.findSummaries();
+    /** Tüm hatların özet bilgileri ve seçilen dönemdeki barkod sayıları. */
+    public List<LineSummary> findAll(Period period) {
+        return lineInfoRepository.findSummaries(period.from(), period.to());
     }
 
-    /** Tek bir hattın özet bilgisini döner. */
+    /** Tek bir hattın tüm zamanlardaki özet bilgisi (API). */
     public LineSummary findById(String lineId) {
-        return lineInfoRepository.findSummary(lineId)
+        return lineInfoRepository.findSummary(lineId, Period.ALL.from(), Period.ALL.to())
                 .orElseThrow(() -> notFound(lineId));
     }
 
     /** Belirli bir hatta ait barkodları filtreli ve sayfalı döner (Hat yoksa 404). */
-    public Page<BarcodeRow> findLineBarcodes(String lineId, BarcodeFilter filter, PageQuery pageQuery) {
+    public Page<BarcodeRow> findLineBarcodes(String lineId, BarcodeFilter filter, Period period, PageQuery pageQuery) {
         requireExists(lineId);
-        return findBarcodes(lineId, filter, pageQuery);
+        return findBarcodes(lineId, filter, period, pageQuery);
     }
 
     /** Genel barkod araması; lineId null ise tüm hatlarda arar. */
-    public Page<BarcodeRow> findBarcodes(String lineId, BarcodeFilter filter, PageQuery pageQuery) {
+    public Page<BarcodeRow> findBarcodes(String lineId, BarcodeFilter filter, Period period, PageQuery pageQuery) {
         return barcodeRepository.search(lineId, LikeEscape.escape(filter.barcodeQuery()), filter.status(), filter.errorCode(),
-                        pageQuery.toPageable("cre_date", "barcode"))
+                        period.from(), period.to(), pageQuery.toPageable("cre_date", "barcode"))
                 .map(b -> new BarcodeRow(b.getBarcode(), b.getLineId(), b.getCreDate(), b.getStatus(), errorLabel(b)));
     }
 
-    /** ERP'ye aktarılamayan barkodların hata türüne göre dağılımı; lineId null ise tüm hatlar. */
-    public List<ErrorCount> findErrorCounts(String lineId) {
-        return barcodeRepository.countErrors(lineId).stream()
+    /** Seçilen dönemde ERP'ye aktarılamayan barkodların hata türüne göre dağılımı; lineId null ise tüm hatlar. */
+    public List<ErrorCount> findErrorCounts(String lineId, Period period) {
+        return barcodeRepository.countErrors(lineId, period.from(), period.to()).stream()
                 .map(e -> new ErrorCount(e.getCode(), ErpError.labelOf(e.getCode()), e.getCount()))
                 .toList();
     }

@@ -3,7 +3,7 @@
 <!--
   ERP'ye aktarilamayan barkodlarin hata turune gore dagilimi. Pano (tum hatlar) ve hat sayfasi ortak kullanir.
   Parametre lineId: null ise satirlar duz metindir; doluysa her satir o hattin listesini o hata turuyle suzer.
-  Model: errorCounts (List<ErrorCount>).
+  Model: errorCounts (List<ErrorCount>), periodFilter.
 -->
 <body>
 <section th:fragment="errorCounts(lineId)" class="card shadow-sm border bg-white mb-4" aria-label="ERP Hata Dağılımı">
@@ -12,7 +12,7 @@
     <ul th:unless="${errorCounts.isEmpty()}" class="list-group list-group-flush">
         <li th:each="e : ${errorCounts}" class="list-group-item d-flex justify-content-between align-items-center">
             <a th:if="${lineId != null and e.code != null}"
-               th:href="@{/line/{id}(id=${lineId}, status='ERROR', errorCode=${e.code})}"
+               th:href="@{/line/{id}(id=${lineId}, status='ERROR', errorCode=${e.code}, range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift})}"
                th:text="${e.label}">İş emri bulunamadı</a>
             <span th:unless="${lineId != null and e.code != null}" th:text="${e.label}">İş emri bulunamadı</span>
             <span class="badge text-bg-danger rounded-pill" th:text="${e.count}">2505</span>

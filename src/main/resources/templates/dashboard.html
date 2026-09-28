@@ -5,10 +5,40 @@
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
 <main class="container-fluid px-4">
+    <!-- Dönem seçimi (tazelenmez; seçim adreste taşınır). Hazır dönemler göreli bağlantılardır ve gün seçimini bırakır;
+         geçmişe bakmak için gün + vardiya formu. Hat kartları seçili dönemi hat sayfasına taşır. -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <nav class="btn-group" aria-label="Hazır dönemler">
+            <a th:with="active=${periodFilter.day == null and periodFilter.range == 'shift'}"
+               th:href="@{/dashboard(range='shift')}"
+               th:class="${active} ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary'"
+               th:attr="aria-current=${active} ? 'true' : null">Bu vardiya</a>
+            <a th:with="active=${periodFilter.day == null and periodFilter.range == 'today'}"
+               th:href="@{/dashboard(range='today')}"
+               th:class="${active} ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary'"
+               th:attr="aria-current=${active} ? 'true' : null">Bugün</a>
+            <a th:with="active=${periodFilter.day == null and periodFilter.range == 'all'}"
+               th:href="@{/dashboard(range='all')}"
+               th:class="${active} ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary'"
+               th:attr="aria-current=${active} ? 'true' : null">Tüm zamanlar</a>
+        </nav>
+        <form method="get" th:action="@{/dashboard}" class="d-flex flex-wrap align-items-center gap-2" aria-label="Gün ve vardiya seçimi">
+            <input type="date" name="day" required="required" class="form-control form-control-sm w-auto" aria-label="Gün"
+                   th:value="${periodFilter.day}" />
+            <select name="shift" class="form-select form-select-sm w-auto" aria-label="Vardiya">
+                <option value="" th:selected="${periodFilter.shift == null}">Tüm gün</option>
+                <option th:each="s, it : ${shifts}" th:value="${it.count}" th:text="${s}"
+                        th:selected="${periodFilter.shift == it.count}">1. vardiya (08:00–16:00)</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-primary">Göster</button>
+        </form>
+    </div>
+
     <div th:replace="~{fragments/layout :: staleBanner}"></div>
 
-    <!-- Tazelenen alan: refresh.js "refresh" olayını tetikler, htmx içeriği /fragments/dashboard ile değiştirir -->
-    <div th:hx-get="@{/fragments/dashboard}" hx-trigger="refresh" hx-swap="innerHTML" hx-sync="this:drop">
+    <!-- Tazelenen alan: refresh.js "refresh" olayını tetikler, htmx içeriği aynı dönemle /fragments/dashboard'dan çeker -->
+    <div th:hx-get="@{/fragments/dashboard(range=${periodFilter.range}, day=${periodFilter.day}, shift=${periodFilter.shift})}"
+         hx-trigger="refresh" hx-swap="innerHTML" hx-sync="this:drop">
         <div th:replace="~{fragments/dashboard-data :: dashboardData}"></div>
     </div>
 </main>

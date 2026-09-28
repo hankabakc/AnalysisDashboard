@@ -27,13 +27,15 @@ public interface BarcodeRepository extends JpaRepository<BarcodeData, BarcodeId>
                      CASE WHEN b.api_result LIKE 'Failed to send%' THEN 'CONNECTION' END)""";
 
     /**
-     * Dinamik barkod filtresi: Gönderilen parametreler null ise filtre uygulanmaz.
+     * Dinamik barkod filtresi: Gönderilen parametreler null ise filtre uygulanmaz. Dönem [from, to) UTC her zaman
+     * uygulanır ("tüm zamanlar" da bir aralıktır).
      * CAST(... AS text): PostgreSQL'in null parametrelerde veri tipini belirleyebilmesi için gereklidir.
      * ILIKE: Barkod metninde büyük/küçük harf duyarsız arama yapar.
      */
     String SEARCH_FILTER = """
             FROM barcode_data b
-            WHERE (CAST(:lineId AS text) IS NULL OR b.line_id = CAST(:lineId AS text))
+            WHERE b.cre_date >= :from AND b.cre_date < :to
+              AND (CAST(:lineId AS text) IS NULL OR b.line_id = CAST(:lineId AS text))
               AND (CAST(:barcodeQuery AS text) IS NULL OR b.barcode ILIKE '%' || CAST(:barcodeQuery AS text) || '%' ESCAPE '!')
               AND (CAST(:status AS text) IS NULL OR b.status = CAST(:status AS text))
               AND (CAST(:errorCode AS text) IS NULL OR
@@ -47,22 +49,27 @@ public interface BarcodeRepository extends JpaRepository<BarcodeData, BarcodeId>
                                       @Param("barcodeQuery") String barcodeQuery,
                                       @Param("status") String status,
                                       @Param("errorCode") String errorCode,
+                                      @Param("from") LocalDateTime from,
+                                      @Param("to") LocalDateTime to,
                                       Pageable pageable);
 
     /**
-     * Hatalı barkodların hata koduna göre adetleri, çoktan aza. lineId null ise tüm hatlar sayılır.
+     * Seçilen dönemdeki hatalı barkodların hata koduna göre adetleri, çoktan aza. lineId null ise tüm hatlar sayılır.
      * Hata türü sayısı birkaç tanedir; LIMIT yalnızca listeyi sınırsız bırakmamak için.
      */
     @Query(value = "SELECT " + ERROR_CODE + " AS code, count(*) AS count " + """
             FROM barcode_data b
             WHERE b.status = 'ERROR'
+              AND b.cre_date >= :from AND b.cre_date < :to
               AND (CAST(:lineId AS text) IS NULL OR b.line_id = CAST(:lineId AS text))
             GROUP BY 1
             ORDER BY 2 DESC, 1
             LIMIT 10
             """,
            nativeQuery = true)
-    List<ErrorCountProjection> countErrors(@Param("lineId") String lineId);
+    List<ErrorCountProjection> countErrors(@Param("lineId") String lineId,
+                                           @Param("from") LocalDateTime from,
+                                           @Param("to") LocalDateTime to);
 
     /** Verilen durumda olup verilen UTC zamandan önce oluşmuş barkod sayısı (ör. takılı kalmış NEW'ler). */
     long countByStatusAndCreDateBefore(String status, LocalDateTime before);

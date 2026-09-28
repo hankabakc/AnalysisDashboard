@@ -32,6 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class DashboardControllerTest {
 
     private static final String LINE_1 = "//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='1']]";
+    private static final String DISPLAY_COUNT = "//div[contains(@class, 'display-6')]";
+    private static final String BREAKDOWN = "//section[@aria-label='ERP Hata Dağılımı']";
 
     @Autowired
     private MockMvc mvc;
@@ -43,7 +45,7 @@ class DashboardControllerTest {
     @Test
     @DisplayName("GET /dashboard: 192.168.1.181, ACTIVE ve 5 hattın adetlerini hat kartı bazında kesin doğrular")
     void dashboardShowsPlcAndLineCounts() throws Exception {
-        mvc.perform(get("/dashboard"))
+        mvc.perform(get("/dashboard").param("range", "all"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("192.168.1.181")))
                 .andExpect(content().string(containsString("ACTIVE")))
@@ -53,9 +55,9 @@ class DashboardControllerTest {
                 .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='3']]//div[contains(@class, 'display-6')]").string("14"))
                 .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='4']]//div[contains(@class, 'display-6')]").string("2325"))
                 .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='5']]//div[contains(@class, 'display-6')]").string("2"))
-                // Hat kartlarının /line/{id} bağlantıları
-                .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='1']]/@href").string("/line/1"))
-                .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='5']]/@href").string("/line/5"))
+                // Hat kartlarının /line/{id} bağlantıları seçili dönemi taşır
+                .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='1']]/@href").string("/line/1?range=all&day=&shift="))
+                .andExpect(xpath("//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='5']]/@href").string("/line/5?range=all&day=&shift="))
                 // Dış CDN kullanılmaz; varlıklar WebJar olarak pakete gömülü
                 .andExpect(content().string(not(containsString("cdn.jsdelivr.net"))))
                 .andExpect(content().string(containsString("/webjars/bootstrap/")));
@@ -64,18 +66,17 @@ class DashboardControllerTest {
     @Test
     @DisplayName("GET /fragments/dashboard: hat kartında aktarılan/hatalı/bekleyen, altta tüm hatların ERP hata dağılımı")
     void dashboardShowsErpTransferCountsAndErrorBreakdown() throws Exception {
-        String breakdown = "//section[@aria-label='ERP Hata Dağılımı']";
-        mvc.perform(get("/fragments/dashboard"))
+        mvc.perform(get("/fragments/dashboard").param("range", "all"))
                 .andExpect(status().isOk())
-                .andExpect(xpath(LINE_1 +"//dt[contains(., 'Aktarılan')]/following-sibling::dd[1]").string("0"))
-                .andExpect(xpath(LINE_1 +"//dt[contains(., 'Hatalı')]/following-sibling::dd[1]").string("1319"))
-                .andExpect(xpath(LINE_1 +"//dt[contains(., 'Bekleyen')]/following-sibling::dd[1]").string("0"))
-                .andExpect(xpath(breakdown + "//li").nodeCount(3))
-                .andExpect(xpath(breakdown + "//li[contains(., 'İş emri bulunamadı')]/span[contains(@class, 'badge')]").string("2505"))
-                .andExpect(xpath(breakdown + "//li[contains(., 'Barkod formatı hatalı')]/span[contains(@class, 'badge')]").string("961"))
-                .andExpect(xpath(breakdown + "//li[contains(., 'ulaşılamadı')]/span[contains(@class, 'badge')]").string("200"))
+                .andExpect(xpath(LINE_1 + "//dt[contains(., 'Aktarılan')]/following-sibling::dd[1]").string("0"))
+                .andExpect(xpath(LINE_1 + "//dt[contains(., 'Hatalı')]/following-sibling::dd[1]").string("1319"))
+                .andExpect(xpath(LINE_1 + "//dt[contains(., 'Bekleyen')]/following-sibling::dd[1]").string("0"))
+                .andExpect(xpath(BREAKDOWN +"//li").nodeCount(3))
+                .andExpect(xpath(BREAKDOWN +"//li[contains(., 'İş emri bulunamadı')]/span[contains(@class, 'badge')]").string("2505"))
+                .andExpect(xpath(BREAKDOWN +"//li[contains(., 'Barkod formatı hatalı')]/span[contains(@class, 'badge')]").string("961"))
+                .andExpect(xpath(BREAKDOWN +"//li[contains(., 'ulaşılamadı')]/span[contains(@class, 'badge')]").string("200"))
                 // Tüm hatların özetinde süzülecek tek hat yok; satırlar bağlantı değildir
-                .andExpect(xpath(breakdown + "//a").doesNotExist());
+                .andExpect(xpath(BREAKDOWN +"//a").doesNotExist());
     }
 
     @Test
@@ -118,12 +119,53 @@ class DashboardControllerTest {
     }
 
     @Test
+    @DisplayName("Varsayılan dönem bu vardiya: Hat 1 = 197 (hepsi bağlantı hatası), etiket vardiyayı yazar")
+    void defaultPeriodIsCurrentShift() throws Exception {
+        mvc.perform(get("/fragments/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(xpath(LINE_1 + DISPLAY_COUNT).string("197"))
+                .andExpect(content().string(containsString("Bu vardiya: 31.07.2025 · 1. vardiya (08:00–16:00)")))
+                .andExpect(xpath(BREAKDOWN + "//li").nodeCount(1))
+                .andExpect(xpath(BREAKDOWN + "//li[contains(., 'ulaşılamadı')]/span[contains(@class, 'badge')]").string("197"));
+    }
+
+    @Test
+    @DisplayName("?range=today → Hat 1 197; ?day=2025-07-28 → Hat 1 209, Hat 4 460; &shift=2 → 16 / 33")
+    void todayAndSpecificDay() throws Exception {
+        String line4 = "//a[contains(@class, 'card flex-shrink-0')][.//h4[text()='4']]";
+        mvc.perform(get("/fragments/dashboard").param("range", "today"))
+                .andExpect(xpath(LINE_1 + DISPLAY_COUNT).string("197"));
+        mvc.perform(get("/fragments/dashboard").param("day", "2025-07-28"))
+                .andExpect(xpath(LINE_1 + DISPLAY_COUNT).string("209"))
+                .andExpect(xpath(line4 + DISPLAY_COUNT).string("460"))
+                .andExpect(content().string(containsString("28.07.2025 · tüm gün (08:00–08:00)")));
+        mvc.perform(get("/fragments/dashboard").param("day", "2025-07-28").param("shift", "2"))
+                .andExpect(xpath(LINE_1 + DISPLAY_COUNT).string("16"))
+                .andExpect(xpath(line4 + DISPLAY_COUNT).string("33"));
+    }
+
+    @Test
+    @DisplayName("GET /dashboard?day=2025-07-28&shift=2: tazeleme ve hat bağlantıları dönemi taşır, form seçimi gösterir; hazır dönemler günü bırakır")
+    void periodIsKeptInRefreshAndLineLinks() throws Exception {
+        mvc.perform(get("/dashboard").param("day", "2025-07-28").param("shift", "2"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string("/fragments/dashboard?range=shift&day=2025-07-28&shift=2"))
+                .andExpect(xpath(LINE_1 + "/@href").string("/line/1?range=shift&day=2025-07-28&shift=2"))
+                .andExpect(xpath("//input[@name='day']/@value").string("2025-07-28"))
+                .andExpect(xpath("//select[@name='shift']/option[@selected]/@value").string("2"))
+                .andExpect(xpath("//nav[@aria-label='Hazır dönemler']//a[@aria-current]").doesNotExist())
+                .andExpect(xpath("//a[text()='Bu vardiya']/@href").string("/dashboard?range=shift"))
+                .andExpect(xpath("//a[text()='Tüm zamanlar']/@href").string("/dashboard?range=all"));
+    }
+
+    @Test
     @DisplayName("GET /dashboard: veri alanı /fragments/dashboard ile tazelenir; aralık 5 sn, bayatlık 15 sn, zaman aşımı 4 sn; uyarı başta gizli")
     void dashboardPageIsWiredForRefresh() throws Exception {
         mvc.perform(get("/dashboard"))
                 .andExpect(status().isOk())
-                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string("/fragments/dashboard"))
+                .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-get").string("/fragments/dashboard?range=shift&day=&shift="))
                 .andExpect(xpath("//div[@hx-trigger='refresh']/@hx-sync").string("this:drop"))
+                .andExpect(xpath("//nav[@aria-label='Hazır dönemler']//a[@aria-current='true']").string("Bu vardiya"))
                 .andExpect(xpath("//script[contains(@src, '/webjars/htmx.org/')]").exists())
                 .andExpect(xpath("//script[@src='/js/refresh.js']/@data-refresh-ms").string("5000"))
                 .andExpect(xpath("//script[@src='/js/refresh.js']/@data-stale-ms").string("15000"))
@@ -135,7 +177,7 @@ class DashboardControllerTest {
     @Test
     @DisplayName("GET /fragments/dashboard: yalnızca veri alanını (PLC + hat adetleri + son güncelleme) döner; menü ve sayfa iskeleti yok")
     void dashboardFragmentRendersDataOnly() throws Exception {
-        mvc.perform(get("/fragments/dashboard"))
+        mvc.perform(get("/fragments/dashboard").param("range", "all"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("192.168.1.181")))
                 .andExpect(content().string(containsString("Son güncelleme:")))

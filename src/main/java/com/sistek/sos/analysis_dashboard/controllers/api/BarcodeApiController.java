@@ -3,6 +3,7 @@ package com.sistek.sos.analysis_dashboard.controllers.api;
 import com.sistek.sos.analysis_dashboard.dto.BarcodeFilter;
 import com.sistek.sos.analysis_dashboard.dto.BarcodeRow;
 import com.sistek.sos.analysis_dashboard.dto.PageQuery;
+import com.sistek.sos.analysis_dashboard.dto.Period;
 import com.sistek.sos.analysis_dashboard.dto.api.PageResponse;
 import com.sistek.sos.analysis_dashboard.services.LineService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,7 +32,7 @@ public class BarcodeApiController {
             @Parameter(description = "Hat ID filtresi") @RequestParam(name = "lineId", required = false) String lineId,
             @ParameterObject BarcodeFilter filter,
             @ParameterObject PageQuery pageQuery) {
-        return PageResponse.from(lineService.findBarcodes(lineId, filter, pageQuery));
+        return PageResponse.from(lineService.findBarcodes(lineId, filter, Period.ALL, pageQuery));
     }
 }
 
